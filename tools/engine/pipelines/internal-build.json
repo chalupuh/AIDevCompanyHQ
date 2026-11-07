@@ -12,7 +12,7 @@
           "check": "npm --prefix .studio/app run build" },
         { "id": "qa", "type": "agent", "agent": "qa-engineer", "tier": "local", "maxTurns": 30,
           "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash(npm *)", "Bash(node *)", "Bash(git diff*)"],
-          "task": "QA internal sprint task {{n}}: '{{g2}}'. Check the change against that description (read the diff with git diff if available, otherwise the files named in docs/internal/sprint-log.md '## Sprint {{sprint}} Task {{n}}'). Run the app build and any tests. Write docs/internal/qa/s{{sprint}}-task-{{n}}.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL' with reasons.",
+          "task": "QA internal sprint task {{n}}: '{{g2}}'. Check the change against that description (read the diff with git diff if available, otherwise the files named in docs/internal/sprint-log.md '## Sprint {{sprint}} Task {{n}}'). Run the app build and any tests. If any file under tools/engine/ changed in this task, run `node tools/engine/test.js` and treat a non-zero exit as a QA failure. Write docs/internal/qa/s{{sprint}}-task-{{n}}.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL' with reasons.",
           "expect": ["docs/internal/qa/s{{sprint}}-task-{{n}}.md"],
           "check": "node -e \"if(!/VERDICT: PASS/.test(require('fs').readFileSync('docs/internal/qa/s{{sprint}}-task-{{n}}.md','utf8')))process.exit(1)\"" }
       ] },

@@ -75,3 +75,102 @@ Internal tasks for the Studio engine and tooling.
 - `.studio/app/src/features/ops/format.test.ts`: 23 tests — `fmtDuration` (seconds/minutes/hours/days, edge values), `fmtTokens` (small/k/M), `isCloudTier`, `budgetLevel` (ok/warn/over thresholds), `isEscalation` (tier mismatch, missing stage/tier), `needsOwner`.
 
 **Verification:** `npm test` → 3 test files, 92 tests, all PASS. `npm run typecheck` → clean.
+
+## Sprint 1b Task 1 — Restore real failure detection in parseRunOutput/verify
+
+**Problem (B4 critical):** Task 1's fix over-suppressed: the `[claude-code:unrecognized_model]` warning suppressed ALL errors, even genuine failures with no result. `verify()` also skipped the "empty final answer" check when `ignoredWarning` was set, masking broken runs.
+
+**Changed (tools/engine/engine.js — parseRunOutput):**
+- `hasFailure` expanded: `out.is_error || r.status !== 0 || !!r.error || !!r.signal` (added `r.error` and `r.signal` for spawn failures and signal-terminated processes).
+- Removed the `suppress = modelWarning` flag — the warning is logged to `ignoredWarning` for observability but NEVER suppresses an error.
+- Error condition simplified to `(hasFailure && !hasResult)` — a partial success (hasFailure but hasResult) still does not report an error.
+
+**Changed (tools/engine/engine.js — verify):**
+- Removed `&& !res.ignoredWarning` bypass from the "empty final answer" check, so empty results are always flagged regardless of warnings.
+- Exported `verify` in `module.exports` for direct testing.
+
+**Changed (tools/engine/selftest.js):**
+- Flipped test 11: `unrecognized_model + failure + no result` now expects an error (was suppressed before).
+- Flipped test 13: `unrecognized_model buried in stderr + failure` now expects an error (was suppressed before).
+- Added test 15: timeout case — `status: null`, `signal: SIGTERM`, no result → error reported via `r.signal` in `hasFailure`.
+- Added test 16: direct `verify()` tests — error + empty result reports both problems; clean success has no problems; ignoredWarning does not bypass "empty final answer".
+
+**Verification (self-test):** `node tools/engine/selftest.js` → **37 passed, 0 failed** across 16 test scenarios.
+
+**Verification (QA):** QA engineer ran selftest and additional edge-case probes. All 37 assertions pass. Edge cases confirmed: whitespace-only result caught by verify(), r.error object (EACCES) detected, signal-based timeout detected, partial success (hasFailure+hasResult) not flagged. Report: `docs/internal/qa/s1b-task-1.md`.
+
+```
+✓ clean success → no error
+  ✓ clean success → result preserved
+  ✓ clean success → turns parsed
+  ✓ stderr warning on success → no error
+  ✓ stderr warning on success → result preserved
+  ✓ is_error + has result → no error (partial success)
+  ✓ is_error + has result → result preserved
+  ✓ is_error + no result → error reported
+  ✓ is_error + no result → stderr captured
+  ✓ non-zero status + no result → error reported
+  ✓ non-zero status + no result → stderr captured
+  ✓ is_error + non-zero + no result → error reported
+  ✓ is_error + non-zero + no result → stderr captured
+  ✓ empty stderr + is_error + no result → subtype used
+  ✓ empty stderr + is_error + no result → hitTurnCap true
+  ✓ empty stdout → no error
+  ✓ empty stdout → result is empty string
+  ✓ malformed JSON → no error
+  ✓ malformed JSON → result is empty string
+  ✓ usage parsed correctly
+  ✓ unrecognized_model + failure + no result → error reported (not suppressed)
+  ✓ unrecognized_model → ignoredWarning still logged
+  ✓ unrecognized_model → ignoredWarning contains the message
+  ✓ unrecognized_model → turns still parsed
+  ✓ unrecognized_model + has result → no error
+  ✓ unrecognized_model + has result → result preserved
+  ✓ unrecognized_model + has result → ignoredWarning set
+  ✓ unrecognized_model buried in stderr → error reported (not suppressed)
+  ✓ unrecognized_model buried → ignoredWarning still logged
+  ✓ genuine failure without model warning → error reported
+  ✓ genuine failure → ignoredWarning is null
+  ✓ timeout (signal SIGTERM, no result) → error reported
+  ✓ timeout → stderr captured in error
+  ✓ timeout → ignoredWarning is null
+  ✓ verify() with error + empty result → reports both error and empty answer
+  ✓ verify() with clean success → no problems
+  ✓ verify() with ignoredWarning + empty result → empty final answer still reported
+
+37 passed, 0 failed.
+```
+
+## Sprint 1b Task 3 — Externalize Git Bash path + engine test runner
+
+**Problem (S6 engine + S8):** Hard-coded Git Bash path `E:\Claude Projects\Git\bin\bash.exe` in `engine.js` meant every new machine needed a code change to find its shell. No single npm-free command ran all engine self-tests.
+
+**Changed (tools/engine/engine.js — runAgent):**
+- Git Bash resolution order: (1) env `STUDIO_GIT_BASH`, (2) `.studio/machine.json` field `gitBash`, (3) system default `C:\Program Files\Git\bin\bash.exe`. Hard-coded `E:\` path removed.
+- `machine.json` is read safely (try/catch, empty object fallback if missing).
+
+**Changed (.studio/machine.json — created):**
+- `{"gitBash": "E:\\Claude Projects\\Git\\bin\\bash.exe"}` — machine-local config for this PC. Other developers create their own with their path.
+
+**Changed (.gitignore):**
+- Added `.studio/machine.json` so per-machine paths never get committed.
+
+**Changed (tools/engine/test.js — created):**
+- NPM-free test runner: `node tools/engine/test.js` spawns both `selftest.js` (parseRunOutput/verify, 37 assertions) and `selftest-team-lead.js` (resolveTeamLead, 18 assertions), inherits output, exits 1 if any suite fails.
+
+**Changed (tools/engine/pipelines/internal-build.json):**
+- QA stage task now instructs: "If any file under tools/engine/ changed in this task, run `node tools/engine/test.js` and treat a non-zero exit as a QA failure."
+
+**Verification:**
+- `node tools/engine/test.js` → 37/37 parseRunOutput assertions + 18/18 resolveTeamLead assertions, all PASS, exit 0.
+- Resolution logic tested in three scenarios: no env → picks machine.json path; bad env → picks machine.json path; no machine.json → falls through to system default (correct on this PC where system default doesn't exist).
+
+## Sprint 1b Task 4
+**S1 (kept):** team-colour avatar override reverted in `AgentCard.tsx` / `org.css`; agents use their own `c.color`, only the owner fallback uses `var(--owner)`.
+
+**S2 rework (`.studio/app/src/features/org/Chart.tsx`, `org.css`):**
+- S2-B1: a drag moving >4 px (`DRAG_THRESHOLD`) installs a one-shot capture-phase `click` swallower on mouseup, so the drag doesn't open a card.
+- S2-B2: `preventDefault()` on mousedown for pan starts; skipped when the target is within `button, a, .o-card, .o-toggle`.
+- S2-B3: cursor via CSS: `.o-zoom-viewport{cursor:grab}` and `.dragging{cursor:grabbing}` (class toggled on the viewport); inline cursor styles removed.
+
+**Verified:** `npm --prefix .studio/app run build` OK; `npm --prefix .studio/app test` 92/92 pass. Drag behaviour has no unit test (no DOM test environment in the app); checked by code reading only.

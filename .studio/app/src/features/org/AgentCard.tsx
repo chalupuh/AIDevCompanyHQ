@@ -4,7 +4,7 @@ import type { AgentLive } from '../../store';
 import { STATUS_VAR, TEAM_VAR, displayName, initials } from './model';
 
 /** Portrait image with a generated SVG avatar fallback (initials on the character colour). */
-export function Portrait({ id, c, size, team }: { id: string; c?: Character; size: number; team?: Team }) {
+export function Portrait({ id, c, size }: { id: string; c?: Character; size: number }) {
   const [failed, setFailed] = useState(false);
   const name = displayName(id, c);
   if (c?.portrait && !failed) {
@@ -12,8 +12,7 @@ export function Portrait({ id, c, size, team }: { id: string; c?: Character; siz
   }
   const fill = c?.color || 'var(--faint)';
   return (
-    <svg className="o-portrait o-avatar-fallback" width={size} height={size} viewBox="0 0 100 100" aria-hidden="true"
-      data-team={team} style={team ? { ['--av-team' as string]: TEAM_VAR[team] } : undefined }>
+    <svg className="o-portrait o-avatar-fallback" width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
       <rect width="100" height="100" fill={fill} />
       <circle cx="50" cy="38" r="18" fill="#fff" opacity=".22" />
       <path d="M14 100c0-22 16-36 36-36s36 14 36 36z" fill="#fff" opacity=".22" />
@@ -78,7 +77,7 @@ export function AgentCard({ id, c, team, live, models, head, onOpen }: CardProps
     >
       <div className="o-card-top">
         <Ring pct={live?.pct ?? 0} status={status} size={head ? 72 : 60}>
-          <Portrait id={id} c={c} size={head ? 60 : 48} team={team} />
+          <Portrait id={id} c={c} size={head ? 60 : 48} />
         </Ring>
         <div className="o-card-id">
           <strong className="o-name">{name}</strong>

@@ -13,7 +13,7 @@
     { "id": "approve-plan", "type": "gate", "title": "{{slug}}: approve spec + design (answer open questions in the spec first)", "show": ["docs/specs/{{slug}}.md", "docs/specs/{{slug}}.design.md"] },
     { "id": "milestones", "type": "foreach", "items": { "file": "docs/specs/{{slug}}.design.md", "regex": "^## (Milestone \\d+:.*)$" },
       "stages": [
-        { "id": "build", "type": "agent", "agent": "__team_lead__", "tier": "local", "maxTurns": 60, "timeoutMin": 60,
+        { "id": "build", "type": "agent", "agent": "__team_lead__", "designDoc": "docs/specs/{{slug}}.design.md", "tier": "local", "maxTurns": 60, "timeoutMin": 60,
           "task": "Implement '{{item}}' from docs/specs/{{slug}}.design.md (only that milestone). Use the Team role named in design.md; follow its rules. Run lint/typecheck/tests before finishing." },
         { "id": "qa", "type": "agent", "agent": "qa-engineer", "tier": "local", "maxTurns": 40,
           "task": "QA '{{item}}' of {{slug}} against docs/specs/{{slug}}.md. Write docs/specs/{{slug}}.qa-m{{n}}.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL'.",
