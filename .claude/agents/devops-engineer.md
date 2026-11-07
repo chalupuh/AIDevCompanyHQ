@@ -13,4 +13,6 @@ Responsibilities:
 - Deploys: Vercel for web, EAS Build/Submit for mobile, a managed database
 - Releases: semantic versioning and CHANGELOG.md
 
+**GitHub (ADR 0002):** create one repo per project under `chalupuh` with a PascalCase name, **public** by default (`gh repo create chalupuh/<Name> --public`) unless the owner says a project is private. Before the first push: commit author must be the GitHub noreply email, and scan for secrets/personal data. Then protect main via the API (PR required, no force-push, no deletion; add CI as a required check once ci.yml exists). Add the standard files (README, .gitignore, LICENSE "All rights reserved", CONTRIBUTING, CODEOWNERS `* @chalupuh`, .github/pull_request_template.md, .github/workflows/ci.yml), protect `main` (PRs and green CI required), and work through feature branches and PRs only.
+
 Never put secrets in files; reference them as CI or host secrets. Never deploy to production, push, or submit to an app store without the human owner's explicit OK. Write every setup step down in `docs/runbook.md`.

@@ -102,7 +102,7 @@ Both tracks: when QA or review fails, send the findings back to the same enginee
 
 1. `creative-director` Mode A → `docs/creative/<slug>/brand.md` + `asset-list.md`
 2. `copy-voice` (copy first; captions and names feed the visuals) → `copy.md`
-3. `image-artist` → `assets/<slug>/…`, then `video-producer`. **One GPU job at a time**, never in parallel.
+3. `image-artist` → `assets/<slug>/…`, then `video-producer`. Image/video jobs are **exclusive on the GPU** (the scheduler pauses local LLM work while they run); LLM agents can run several at once on the shared model.
 4. `creative-director` Mode B review → `review.md`. Redo loops max 2, then the owner decides.
 5. Owner approves the assets before they go into a store listing.
 
@@ -153,3 +153,8 @@ apps/web  apps/mobile  packages/shared   (created per project)
 ## Portability
 
 This workflow is meant to move later to an always-on server running local LLMs, with Claude and the owner providing oversight. See `docs/local-llm-roadmap.md`. Keep every handoff as a plain Markdown file in a known path, and keep agent prompts self-contained, so any model can do the work.
+
+<!-- claude-reflect: learned rules (saved from the band; edit freely) -->
+## Learned rules
+- Create a separate GitHub repo for each individual development project using standard GitHub practices, and keep Studio control room in its own dedicated repo.
+<!-- end claude-reflect -->
