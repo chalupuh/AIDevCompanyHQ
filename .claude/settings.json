@@ -1,4 +1,10 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(node tools/ci/merge-pr.js:*)",
+      "Bash(node \"C:/Users/goldg/AI Development Company/tools/ci/merge-pr.js\":*)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       { "matcher": ".*", "hooks": [{ "type": "command", "command": "node \"C:/Users/goldg/AI Development Company/.studio/studio.js\" hook", "timeout": 5 }] }

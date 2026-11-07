@@ -30,6 +30,12 @@ Subagents can't start other subagents, so the main session runs **both** teams' 
 - `.studio/studio.js` and `tools/engine/engine.js` in this repo are **forwarding shims** to that checkout, so every command below keeps working. Set `STUDIO_SOFT` if the software lives elsewhere.
 - **Control Room / engine changes are made in StudioControlRoom** (internal-build runs with `workdir={{soft}}`). Org and docs changes are made here. Both repos: branch, PR, required CI, then squash merge.
 
+## Auto-merge policy (owner decision 2026-11-07)
+
+The owner does not approve routine merges. **Internal PRs** (AIDevCompanyHQ, StudioControlRoom) are merged by Claude or the engine with `node tools/ci/merge-pr.js <owner/repo> <pr> --wait` when: CI is green, the PR is not a draft and targets main, and the work passed QA plus an Opus review APPROVE (or is a small fix Claude tested itself). The script enforces the mechanical guards and refuses anything else.
+
+**Still the owner's call:** which app to build and its spec; releasing or shipping anything external (stores, deploys, user-facing); spending money; destructive or irreversible actions (deleting repos, force-push, visibility changes). Label a PR `owner-review` to force a manual decision.
+
 ## Workflow Engine: default way to run work (ADR 0001)
 
 Pipelines run through `tools/engine/engine.js`, not through this chat session. The engine runs each stage as a headless Claude Code run using the role's agent file: **local models** (`qwen3.6:27b` via Ollama) for worker stages and **Claude Opus** only for gate reviews (design, milestone code review, R&D calibration). Success is decided by file and test checks, never by the model's own claim. Failed stages climb the ladder (local → local retry → Sonnet → **blocked** → owner).

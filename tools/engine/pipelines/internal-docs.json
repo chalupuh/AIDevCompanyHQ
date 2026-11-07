@@ -1,0 +1,100 @@
+{
+  "description": "Internal docs/config sprint for AIDevCompanyHQ (run with workdir=<HQ worktree>): each backlog line → named agent (local) → QA (local) → Opus review → tick backlog → ship (commit, PR, CI, auto-merge per policy). Check: node tools/ci/check-config.js.",
+  "required": [],
+  "defaults": {
+    "backlog": "{{home}}/docs/internal/eng-backlog.md",
+    "sprint": "1",
+    "workdir": "{{soft}}",
+    "repo": "chalupuh/AIDevCompanyHQ",
+    "title": "feat: internal sprint {{sprint}}"
+  },
+  "stages": [
+    {
+      "id": "items",
+      "type": "foreach",
+      "items": {
+        "file": "{{backlog}}",
+        "regex": "^- \\[ \\] \\[([\\w-]+)\\] (.+)$"
+      },
+      "stages": [
+        {
+          "id": "build",
+          "type": "agent",
+          "agent": "{{g1}}",
+          "tier": "local",
+          "maxTurns": 60,
+          "timeoutMin": 60,
+          "allowedTools": [
+            "Read",
+            "Write",
+            "Edit",
+            "Glob",
+            "Grep",
+            "Bash(npm *)",
+            "Bash(npx *)",
+            "Bash(node *)",
+            "Bash(git diff*)",
+            "Bash(git status*)"
+          ],
+          "task": "Internal sprint task {{n}} (you are {{g1}}). Do exactly this and nothing else:\n{{g2}}\nRead the relevant existing code first and match its style. When done, append a short entry to {{home}}/docs/internal/sprint-log.md: '## Sprint {{sprint}} Task {{n}}' + what you changed (files) + how you verified it.",
+          "expect": [
+            "docs/internal/sprint-log.md"
+          ],
+          "check": "node tools/ci/check-config.js"
+        },
+        {
+          "id": "qa",
+          "type": "agent",
+          "agent": "qa-engineer",
+          "tier": "local",
+          "maxTurns": 30,
+          "allowedTools": [
+            "Read",
+            "Write",
+            "Edit",
+            "Glob",
+            "Grep",
+            "Bash(npm *)",
+            "Bash(node *)",
+            "Bash(git diff*)"
+          ],
+          "task": "QA internal sprint task {{n}}: '{{g2}}'. Check the change against that description (read the diff with git diff if available, otherwise the files named in {{home}}/docs/internal/sprint-log.md '## Sprint {{sprint}} Task {{n}}'). Run the app build and any tests. If any file under tools/engine/ changed in this task, run `node tools/ci/check-config.js` and treat a non-zero exit as a QA failure. Write {{home}}/docs/internal/qa/s{{sprint}}-task-{{n}}.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL' with reasons.",
+          "expect": [
+            "docs/internal/qa/s{{sprint}}-task-{{n}}.md"
+          ],
+          "check": "node -e \"if(!/VERDICT: PASS/.test(require('fs').readFileSync('{{home}}/docs/internal/qa/s{{sprint}}-task-{{n}}.md','utf8')))process.exit(1)\""
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "type": "agent",
+      "agent": "code-reviewer",
+      "tier": "opus",
+      "maxTurns": 30,
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Glob",
+        "Grep",
+        "Bash(git diff*)",
+        "Bash(node tools/ci/check-config.js)"
+      ],
+      "task": "Review the whole internal sprint: every unchecked task in {{backlog}}, {{home}}/docs/internal/sprint-log.md and {{home}}/docs/internal/qa/*.md. Read the changed files. Write {{home}}/docs/internal/review-sprint{{sprint}}.md with findings (Blocker / Should fix / Nit, file:line, fix) and end with 'APPROVE' or 'REQUEST CHANGES'.",
+      "expect": [
+        "docs/internal/review-sprint{{sprint}}.md"
+      ],
+      "check": "node -e \"if(!/APPROVEs*$/.test(require('fs').readFileSync('{{home}}/docs/internal/review-sprint{{sprint}}.md','utf8').trim()))process.exit(1)\""
+    },
+    {
+      "id": "tick",
+      "type": "script",
+      "run": "node -e \"const f='{{backlog}}',fs=require('fs');fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/^- \\[ \\] /gm,'- [x] '))\""
+    },
+    {
+      "id": "ship",
+      "type": "script",
+      "run": "node \"{{home}}/tools/ci/ship-branch.js\" \"{{workdir}}\" {{repo}} \"{{title}}\" \"{{home}}/docs/internal/review-sprint{{sprint}}.md\""
+    }
+  ]
+}

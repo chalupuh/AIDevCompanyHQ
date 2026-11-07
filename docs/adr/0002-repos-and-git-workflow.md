@@ -32,6 +32,9 @@ Names are PascalCase, matching the owner's convention. App repos use the app's w
 - **No secrets in git.** Each repo has a `.env.example`, with real values in GitHub Actions secrets or local env only.
 - **Hygiene files in every repo:** `README.md`, `.gitignore`, `.github/pull_request_template.md`, `.github/workflows/ci.yml`, `CODEOWNERS` (`* @chalupuh`), `CONTRIBUTING.md` (this workflow, short), and `LICENSE` (proprietary / "All rights reserved" while private).
 
+## Merging (updated 2026-11-07)
+Superseding "only the owner merges": internal PRs are auto-merged via `tools/ci/merge-pr.js` (guards: internal repo, open, not draft, base main, all CI green, no owner-review/release/do-not-merge label) after QA and an Opus APPROVE. Owner gates remain for app selection and spec, external releases, spending, and destructive actions. The project permission allow-list includes only that script, not `gh pr merge` in general.
+
 ## Plan limitation (found 2026-11-07, resolved by going public)
 On GitHub **Free**, private repos cannot have branch protection or rulesets (the API returns 403: "Upgrade to GitHub Pro or make this repository public"). Making repos public is ruled out, so until the owner decides on GitHub Pro (≈ $4/month):
 - Each clone gets a **local `pre-push` hook** that blocks pushes to `main` (bypass only for an owner-approved emergency: `ALLOW_MAIN_PUSH=1`).
