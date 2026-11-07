@@ -17,10 +17,17 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const REPO = path.resolve(__dirname, '..', '..');
-const PIPES = path.join(__dirname, 'pipelines');
+// REPO = the org workspace (STUDIO_HOME): agents, docs, pipelines, runtime data. The engine itself may live
+// elsewhere (StudioControlRoom). Resolution: STUDIO_HOME env → studio.home.json at the software root → legacy.
+function studioHome() {
+  if (process.env.STUDIO_HOME) return path.resolve(process.env.STUDIO_HOME);
+  try { const c = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'studio.home.json'), 'utf8')); if (c.home) return path.resolve(c.home); } catch {}
+  return path.resolve(__dirname, '..', '..');
+}
+const REPO = studioHome();
+const PIPES = path.join(REPO, 'tools', 'engine', 'pipelines');
 const RUNS = path.join(REPO, '.studio', 'runs');
-const STUDIO = path.join(REPO, '.studio', 'studio.js');
+const STUDIO = [path.join(__dirname, '..', 'studio', 'studio.js'), path.join(REPO, '.studio', 'studio.js')].find((p) => fs.existsSync(p));
 
 // ---- model tiers (ADR 0001) ----
 const TIERS = {
@@ -63,6 +70,8 @@ function fill(tpl, vars) {
     .replace(/\{\{(\w+)\}\}/g, (_, k) => (vars[k] ?? `{{${k}}}`));
 }
 
+// Agents, checks and scripts run in vars.workdir (absolute, or relative to REPO) when set; else in REPO.
+const workdir = (vars) => (vars && vars.workdir ? path.resolve(REPO, fill(vars.workdir, vars)) : REPO);
 const runFile = (id) => path.join(RUNS, id + '.json');
 const save = (run) => { run.updated = now(); fs.mkdirSync(RUNS, { recursive: true }); fs.writeFileSync(runFile(run.id), JSON.stringify(run, null, 2)); };
 const load = (id) => JSON.parse(fs.readFileSync(runFile(id), 'utf8'));
@@ -109,13 +118,15 @@ function runAgent(stage, tierName, vars, feedback) {
     ANTHROPIC_DEFAULT_HAIKU_MODEL: 'qwen3:4b', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
   });
   let prompt = fill(stage.task, vars);
-  prompt += `\n\nStudio rules: work only inside this repository. Report progress with \`node .studio/studio.js log ${stage.agent} <pct> "<msg>"\`.`;
+  const cwd = workdir(vars);
+  const logCmd = cwd === REPO ? 'node .studio/studio.js' : `node "${STUDIO}"`;
+  prompt += `\n\nStudio rules: work only inside this repository (${cwd}). Org docs, specs and backlogs live in ${REPO} (read-only unless the task says to write there). Report progress with \`${logCmd} log ${stage.agent} <pct> "<msg>"\`.`;
   if (stage.expect?.length) prompt += `\nYou MUST create/update these files: ${stage.expect.map((e) => fill(e, vars)).join(', ')}.`;
   if (feedback) prompt += `\n\nA previous attempt failed these checks; fix them:\n${feedback}`;
   const args = ['-p', '--agent', stage.agent, '--model', tier.model, '--permission-mode', 'acceptEdits', '--output-format', 'json', '--max-turns', String(stage.maxTurns || 25)];
   if (stage.allowedTools) args.push('--allowedTools', ...stage.allowedTools);
   const t0 = Date.now();
-  const r = spawnSync(claudeExe(), args, { cwd: REPO, env, input: prompt, encoding: 'utf8', timeout: (stage.timeoutMin || 30) * 60000, maxBuffer: 64 * 1024 * 1024 });
+  const r = spawnSync(claudeExe(), args, { cwd: workdir(vars), env, input: prompt, encoding: 'utf8', timeout: (stage.timeoutMin || 30) * 60000, maxBuffer: 64 * 1024 * 1024 });
   const parsed = parseRunOutput(r);
   return {
     tier: tierName, model: tier.model, secs: Math.round((Date.now() - t0) / 1000),
@@ -135,7 +146,7 @@ function verify(stage, vars, res) {
     if (!fs.existsSync(p) || !fs.statSync(p).size) problems.push(`missing or empty: ${fill(e, vars)}`);
   }
   if (stage.check) {
-    const c = spawnSync(fill(stage.check, vars), { cwd: REPO, shell: true, encoding: 'utf8', timeout: 600000 });
+    const c = spawnSync(fill(stage.check, vars), { cwd: workdir(vars), shell: true, encoding: 'utf8', timeout: 600000 });
     if (c.status !== 0) problems.push(`check failed: ${fill(stage.check, vars)}\n${(c.stdout + c.stderr).slice(-1200)}`);
   }
   return problems;
@@ -180,7 +191,7 @@ function advance(run) {
     }
 
     if (stage.type === 'script') {
-      const c = spawnSync(fill(stage.run, vars), { cwd: REPO, shell: true, encoding: 'utf8' });
+      const c = spawnSync(fill(stage.run, vars), { cwd: workdir(vars), shell: true, encoding: 'utf8' });
       run.history.push({ stage: stage.id, type: 'script', ok: c.status === 0, at: now(), out: (c.stdout + c.stderr).slice(-500) });
       if (c.status !== 0) { run.status = 'blocked'; run.blockedReason = `script ${stage.id} failed`; save(run); return; }
       run.cursor++; save(run); continue;

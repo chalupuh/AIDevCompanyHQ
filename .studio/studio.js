@@ -11,7 +11,17 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 
-const DIR = __dirname;
+// SOFT = where this software lives (dashboard.html, app-dist). HOME = the org workspace (agents, docs,
+// runtime data in HOME/.studio). They are the same folder today; after the StudioControlRoom split they differ.
+// HOME: STUDIO_HOME env → studio.home.json next to the software → legacy (parent of this file's folder).
+const SOFT = __dirname;
+function studioHome() {
+  if (process.env.STUDIO_HOME) return path.resolve(process.env.STUDIO_HOME);
+  try { const c = JSON.parse(fs.readFileSync(path.join(SOFT, '..', 'studio.home.json'), 'utf8')); if (c.home) return path.resolve(c.home); } catch {}
+  return path.resolve(SOFT, '..');
+}
+const HOME = studioHome();
+const DIR = path.join(HOME, '.studio');
 const LOG = path.join(DIR, 'events.jsonl');
 
 function append(ev) {
@@ -169,9 +179,11 @@ function log(args) {
 }
 
 // ---------- Control Room v2 API ----------
-const REPO = path.join(DIR, '..');
+// Engine: STUDIO_ENGINE env → split layout (<software>/engine/engine.js) → legacy (HOME/tools/engine/engine.js)
+const ENGINE = process.env.STUDIO_ENGINE || [path.join(SOFT, '..', 'engine', 'engine.js'), path.join(HOME, 'tools', 'engine', 'engine.js')].find((p) => fs.existsSync(p));
+const REPO = HOME;
 const RUNS = path.join(DIR, 'runs');
-const DIST = path.join(DIR, 'app-dist');
+const DIST = path.join(SOFT, 'app-dist');
 const PORTRAITS = path.join(DIR, 'portraits');
 const readJson = (p, d) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return d; } };
 
@@ -321,7 +333,7 @@ function readBody(req, limit = 64 * 1024) {
 function spawnEngine(args, runId) {
   fs.mkdirSync(RUNS, { recursive: true });
   const out = fs.openSync(path.join(RUNS, runId + '.log'), 'a');
-  const child = require('child_process').spawn(process.execPath, [path.join(REPO, 'tools', 'engine', 'engine.js'), ...args],
+  const child = require('child_process').spawn(process.execPath, [ENGINE, ...args],
     { cwd: REPO, detached: true, windowsHide: true, stdio: ['ignore', out, out] });
   child.on('error', () => {});
   child.unref();
@@ -329,7 +341,7 @@ function spawnEngine(args, runId) {
 }
 
 function serve(port = 4777) {
-  const html = path.join(DIR, 'dashboard.html');
+  const html = path.join(SOFT, 'dashboard.html');
   const json = (res, obj, code = 200) => { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(obj)); };
   const text = (res, s, code = 200) => { res.writeHead(code, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(s); };
   startWatchers();
