@@ -67,10 +67,43 @@ const runFile = (id) => path.join(RUNS, id + '.json');
 const save = (run) => { run.updated = now(); fs.mkdirSync(RUNS, { recursive: true }); fs.writeFileSync(runFile(run.id), JSON.stringify(run, null, 2)); };
 const load = (id) => JSON.parse(fs.readFileSync(runFile(id), 'utf8'));
 
+// Parse Claude Code JSON output and determine error status.
+// Only a real failure signal (is_error or non-zero exit) with no result counts as an error.
+// Stderr warnings like [claude-code:unrecognized_model] on an otherwise-successful run
+// (has result) are NOT errors — they are ignored.
+// When the unrecognized_model warning is present in stderr, we also suppress the error
+// flag even if the JSON result field is empty, because the local model may have
+// completed work before Claude Code's wrapper emitted the exit-code mismatch.
+function parseRunOutput(r) {
+  let out = {};
+  try { out = JSON.parse((r.stdout || '').trim().split('\n').filter(Boolean).pop() || '{}'); } catch {}
+  const stderr = (r.stderr || '');
+  const modelWarning = stderr.includes('[claude-code:unrecognized_model]');
+  const hasFailure = out.is_error || r.status !== 0;
+  const hasResult = !!out.result;
+  // Suppress error when the local-model warning is the only "failure" signal.
+  const suppress = modelWarning;
+  return {
+    turns: out.num_turns,
+    result: String(out.result || '').slice(0, 2000),
+    error: (hasFailure && !hasResult && !suppress) ? stderr.slice(-800) || out.subtype : null,
+    ignoredWarning: suppress ? stderr.slice(0, 300) : null,
+    usage: out.usage ? { in: out.usage.input_tokens, out: out.usage.output_tokens, cached: out.usage.cache_read_input_tokens } : null,
+    hitTurnCap: out.subtype === 'error_max_turns',
+  };
+}
+
 // ---- run one agent stage on a given tier ----
 function runAgent(stage, tierName, vars, feedback) {
   const tier = TIERS[tierName];
   const env = { ...process.env };
+  // Headless Claude Code on Windows needs Git Bash for its Bash tool; without this, agents have
+  // no shell (can't run builds/tests) — found 2026-11-07 when QA couldn't run `npm run build`.
+  if (process.platform === 'win32' && !env.CLAUDE_CODE_GIT_BASH_PATH) {
+    const candidates = [process.env.STUDIO_GIT_BASH, 'E:\\Claude Projects\\Git\\bin\\bash.exe', 'C:\\Program Files\\Git\\bin\\bash.exe'];
+    const found = candidates.find((p) => p && fs.existsSync(p));
+    if (found) env.CLAUDE_CODE_GIT_BASH_PATH = found;
+  }
   if (tier.local) Object.assign(env, {
     ANTHROPIC_BASE_URL: 'http://127.0.0.1:11434', ANTHROPIC_AUTH_TOKEN: 'ollama', ANTHROPIC_API_KEY: '',
     ANTHROPIC_MODEL: tier.model, ANTHROPIC_DEFAULT_OPUS_MODEL: tier.model, ANTHROPIC_DEFAULT_SONNET_MODEL: tier.model,
@@ -84,12 +117,11 @@ function runAgent(stage, tierName, vars, feedback) {
   if (stage.allowedTools) args.push('--allowedTools', ...stage.allowedTools);
   const t0 = Date.now();
   const r = spawnSync(claudeExe(), args, { cwd: REPO, env, input: prompt, encoding: 'utf8', timeout: (stage.timeoutMin || 30) * 60000, maxBuffer: 64 * 1024 * 1024 });
-  let out = {}; try { out = JSON.parse((r.stdout || '').trim().split('\n').filter(Boolean).pop() || '{}'); } catch {}
+  const parsed = parseRunOutput(r);
   return {
     tier: tierName, model: tier.model, secs: Math.round((Date.now() - t0) / 1000),
-    turns: out.num_turns, result: String(out.result || '').slice(0, 2000), error: out.is_error || r.status !== 0 ? (r.stderr || '').slice(-800) || out.subtype : null,
-    usage: out.usage ? { in: out.usage.input_tokens, out: out.usage.output_tokens, cached: out.usage.cache_read_input_tokens } : null,
-    cloud: !tier.local, hitTurnCap: out.subtype === 'error_max_turns',
+    cloud: !tier.local,
+    ...parsed,
   };
 }
 
@@ -98,7 +130,7 @@ function verify(stage, vars, res) {
   const problems = [];
   if (res.error) problems.push('run error: ' + res.error);
   if (res.hitTurnCap) problems.push(`hit the ${stage.maxTurns || 25}-turn cap (likely stuck)`);
-  if (!res.result.trim()) problems.push('empty final answer');
+  if (!res.result.trim() && !res.ignoredWarning) problems.push('empty final answer');
   for (const e of stage.expect || []) {
     const p = path.join(REPO, fill(e, vars));
     if (!fs.existsSync(p) || !fs.statSync(p).size) problems.push(`missing or empty: ${fill(e, vars)}`);
@@ -108,6 +140,20 @@ function verify(stage, vars, res) {
     if (c.status !== 0) problems.push(`check failed: ${fill(stage.check, vars)}\n${(c.stdout + c.stderr).slice(-1200)}`);
   }
   return problems;
+}
+
+// Resolve the build agent from the design.md "Team:" line.
+// Picks the first of frontend-dev, mobile-dev, backend-dev named in that line.
+// Returns "mobile-dev" if the file is missing or no role is found.
+function resolveTeamLead(designPath) {
+	const f = path.join(REPO, designPath);
+	let txt = '';
+	try { txt = fs.readFileSync(f, 'utf8'); } catch {}
+	const line = txt.split('\n').find((l) => /^(?:Team|team):/im);
+	if (!line) return 'mobile-dev';
+	const candidates = ['frontend-dev', 'mobile-dev', 'backend-dev'];
+	for (const c of candidates) { if (line.includes(c)) return c; }
+	return 'mobile-dev';
 }
 
 // ---- the state machine ----
@@ -149,6 +195,11 @@ function advance(run) {
     }
 
     // agent stage with escalation ladder
+    // Resolve __team_lead__ sentinel: pick build agent from design.md "Team:" line
+    if (stage.agent === '__team_lead__') {
+      const designPath = fill('{{slug}}.design.md', vars);
+      stage.agent = resolveTeamLead(designPath);
+    }
     const ladder = LADDER[stage.tier || 'local'];
     let feedback = null, done = false;
     for (let attempt = 0; attempt < ladder.length && !done; attempt++) {
@@ -188,28 +239,32 @@ function advance(run) {
 }
 
 // ---- CLI ----
-const [cmd, ...rest] = process.argv.slice(2);
-const vars = {}; for (let i = 0; i < rest.length; i++) if (rest[i] === '--var') { const [k, ...v] = rest[++i].split('='); vars[k] = v.join('='); }
+if (require.main === module) {
+	const [cmd, ...rest] = process.argv.slice(2);
+	const vars = {}; for (let i = 0; i < rest.length; i++) if (rest[i] === '--var') { const [k, ...v] = rest[++i].split('='); vars[k] = v.join('='); }
 
-if (cmd === 'start') {
-  const name = rest[0];
-  const pipe = JSON.parse(fs.readFileSync(path.join(PIPES, name + '.json'), 'utf8'));
-  const id = `${name}-${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')}-${Math.random().toString(36).slice(2, 5)}`;
-  const run = { id, pipeline: name, vars: { date: new Date().toISOString().slice(0, 10), ...pipe.defaults, ...vars }, stages: pipe.stages, cursor: 0, gates: {}, history: [], status: 'running', created: now() };
-  for (const k of pipe.required || []) if (!run.vars[k]) { console.error(`missing --var ${k}=...`); process.exit(1); }
-  save(run); console.log(`Run ${id} started: ${pipe.description || ''}`); advance(run);
-} else if (cmd === 'resume') {
-  const run = load(rest[0]); run.status = 'running'; save(run); advance(run);
-} else if (cmd === 'approve') {
-  const run = load(rest[0]); const decision = rest[1] || 'approve';
-  const gid = Object.keys(run.gates).find((k) => run.gates[k].status === 'waiting');
-  if (!gid) { console.log('No gate is waiting.'); process.exit(0); }
-  Object.assign(run.gates[gid], { status: decision === 'reject' ? 'rejected' : 'approved', note: rest[2] || '', decided: now() });
-  ev({ type: 'progress', agent: 'owner', pct: 100, status: 'done', message: `Gate ${gid}: ${run.gates[gid].status}${rest[2] ? ' (' + rest[2] + ')' : ''}` });
-  save(run); console.log(`Gate ${gid} ${run.gates[gid].status}.`); if (decision !== 'reject') advance(run); else { run.status = 'stopped'; save(run); }
-} else if (cmd === 'status') {
-  if (rest[0]) { const r = load(rest[0]); console.log(JSON.stringify({ ...r, stages: r.stages.map((s, i) => `${i === r.cursor ? '→ ' : '  '}${s.id}`) }, null, 2)); }
-  else if (fs.existsSync(RUNS)) for (const f of fs.readdirSync(RUNS).filter((f) => f.endsWith('.json'))) { const r = load(f.replace('.json', '')); console.log(`${r.id.padEnd(40)} ${r.status.padEnd(13)} at ${r.stages[r.cursor]?.id || '(end)'}`); }
-} else if (cmd === 'pipelines') {
-  for (const f of fs.readdirSync(PIPES)) { const p = JSON.parse(fs.readFileSync(path.join(PIPES, f), 'utf8')); console.log(`${f.replace('.json', '').padEnd(14)} ${p.description}  [vars: ${(p.required || []).join(', ')}]`); }
-} else console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(1, 16).join('\n'));
+	if (cmd === 'start') {
+		const name = rest[0];
+		const pipe = JSON.parse(fs.readFileSync(path.join(PIPES, name + '.json'), 'utf8'));
+		const id = `${name}-${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')}-${Math.random().toString(36).slice(2, 5)}`;
+		const run = { id, pipeline: name, vars: { date: new Date().toISOString().slice(0, 10), ...pipe.defaults, ...vars }, stages: pipe.stages, cursor: 0, gates: {}, history: [], status: 'running', created: now() };
+		for (const k of pipe.required || []) if (!run.vars[k]) { console.error(`missing --var ${k}=...`); process.exit(1); }
+		save(run); console.log(`Run ${id} started: ${pipe.description || ''}`); advance(run);
+	} else if (cmd === 'resume') {
+		const run = load(rest[0]); run.status = 'running'; save(run); advance(run);
+	} else if (cmd === 'approve') {
+		const run = load(rest[0]); const decision = rest[1] || 'approve';
+		const gid = Object.keys(run.gates).find((k) => run.gates[k].status === 'waiting');
+		if (!gid) { console.log('No gate is waiting.'); process.exit(0); }
+		Object.assign(run.gates[gid], { status: decision === 'reject' ? 'rejected' : 'approved', note: rest[2] || '', decided: now() });
+		ev({ type: 'progress', agent: 'owner', pct: 100, status: 'done', message: `Gate ${gid}: ${run.gates[gid].status}${rest[2] ? ' (' + rest[2] + ')' : ''}` });
+		save(run); console.log(`Gate ${gid} ${run.gates[gid].status}.`); if (decision !== 'reject') advance(run); else { run.status = 'stopped'; save(run); }
+	} else if (cmd === 'status') {
+		if (rest[0]) { const r = load(rest[0]); console.log(JSON.stringify({ ...r, stages: r.stages.map((s, i) => `${i === r.cursor ? '→ ' : '  '}${s.id}`) }, null, 2)); }
+		else if (fs.existsSync(RUNS)) for (const f of fs.readdirSync(RUNS).filter((f) => f.endsWith('.json'))) { const r = load(f.replace('.json', '')); console.log(`${r.id.padEnd(40)} ${r.status.padEnd(13)} at ${r.stages[r.cursor]?.id || '(end)'}`); }
+	} else if (cmd === 'pipelines') {
+		for (const f of fs.readdirSync(PIPES)) { const p = JSON.parse(fs.readFileSync(path.join(PIPES, f), 'utf8')); console.log(`${f.replace('.json', '').padEnd(14)} ${p.description}  [vars: ${(p.required || []).join(', ')}]`); }
+	} else console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(1, 16).join('\n'));
+}
+
+module.exports = { parseRunOutput, resolveTeamLead };

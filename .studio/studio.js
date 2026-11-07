@@ -408,6 +408,12 @@ function serve(port = 4777) {
       return sendFile(res, full, { 'Cache-Control': 'public, max-age=300' });
     }
 
+    if (p.startsWith('/village/') && m === 'GET') {
+      const full = safeJoin(path.join(DIR, 'village'), p.slice('/village/'.length));
+      if (!full || !/\.(png|jpe?g|webp|svg)$/i.test(full) || !isFile(full)) return text(res, 'not found', 404);
+      return sendFile(res, full, { 'Cache-Control': 'public, max-age=300' });
+    }
+
     // ---- SPA ----
     const index = path.join(DIST, 'index.html');
     if (!isFile(index)) return p === '/' ? sendFile(res, html, { 'Cache-Control': 'no-store' }) : text(res, 'not found', 404);

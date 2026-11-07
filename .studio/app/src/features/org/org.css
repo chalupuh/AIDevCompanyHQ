@@ -5,6 +5,18 @@
 
 /* ---- chart ---- */
 .o-chart { display: flex; flex-direction: column; align-items: center; }
+
+/* Zoom controls */
+.o-zoom-bar { display: flex; gap: 4px; margin-bottom: 10px; }
+.o-zoom-btn { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; width: 32px; height: 32px; font-size: 16px; cursor: pointer; color: var(--muted); display: grid; place-items: center; }
+.o-zoom-btn:hover { background: var(--panel2); color: var(--text); border-color: var(--line2); }
+.o-zoom-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* Zoom viewport: scrollable area that contains the scaled canvas */
+.o-zoom-viewport { overflow: auto; width: 100%; border-radius: var(--radius); padding: 8px 0; contain: layout style; }
+.o-zoom-canvas { width: 100%; display: flex; flex-direction: column; align-items: center; transition: transform .15s ease; }
+
+@media (prefers-reduced-motion: reduce) { .o-zoom-canvas { transition: none; } }
 .o-owner { width: 196px; }
 .o-spine { width: 2px; height: 22px; background: var(--line2); }
 .o-depts { width: 100%; display: flex; flex-direction: column; gap: 18px; }
@@ -39,6 +51,8 @@
 .o-ring svg { position: absolute; inset: 0; }
 .o-ring-in { border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--bg2); position: relative; }
 .o-portrait { display: block; border-radius: 50%; object-fit: cover; }
+/* SVG avatar fallback: honour team colour when no character portrait exists */
+.o-avatar-fallback[data-team] rect { fill: var(--av-team); }
 .o-pill { display: inline-flex; align-items: center; gap: 5px; font: 10px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--st); border: 1px solid color-mix(in srgb, var(--st) 50%, transparent); background: color-mix(in srgb, var(--st) 12%, transparent); border-radius: 99px; padding: 1px 8px; }
 .o-pill i { width: 6px; height: 6px; border-radius: 50%; background: var(--st); }
 .o-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; max-height: 40px; overflow: hidden; }
