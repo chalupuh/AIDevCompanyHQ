@@ -59,6 +59,11 @@
             "Bash(git diff*)"
           ],
           "task": "QA internal sprint task {{n}}: '{{g2}}'. Check the change against that description (read the diff with git diff if available, otherwise the files named in {{home}}/docs/internal/sprint-log.md '## Sprint {{sprint}} Task {{n}}'). Run the app build and any tests. If any file under tools/engine/ changed in this task, run `node engine/test.js` and treat a non-zero exit as a QA failure. Write {{home}}/docs/internal/qa/s{{sprint}}-task-{{n}}.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL' with reasons.",
+          "rework": {
+            "to": "build",
+            "verdict": "docs/internal/qa/s{{sprint}}-task-{{n}}.md",
+            "max": 3
+          },
           "expect": [
             "docs/internal/qa/s{{sprint}}-task-{{n}}.md"
           ],
@@ -81,6 +86,12 @@
         "Bash(npm --prefix studio/app run build)"
       ],
       "task": "Review the whole internal sprint: every unchecked task in {{backlog}}, {{home}}/docs/internal/sprint-log.md and {{home}}/docs/internal/qa/*.md. Read the changed files. Write {{home}}/docs/internal/review-sprint{{sprint}}.md with findings (Blocker / Should fix / Nit, file:line, fix) and end with 'APPROVE' or 'REQUEST CHANGES'.",
+      "rework": {
+        "to": "build",
+        "verdict": "docs/internal/review-sprint{{sprint}}.md",
+        "failRegex": "REQUEST CHANGES\\s*$",
+        "max": 3
+      },
       "expect": [
         "docs/internal/review-sprint{{sprint}}.md"
       ],
