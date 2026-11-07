@@ -1,10 +1,12 @@
 {
-  "description": "Internal engineering sprint (code lives in StudioControlRoom, run with workdir={{soft}}): for each unchecked line in the backlog → named agent builds on the local model (build must pass) → QA (local) → one Opus review → owner gate. Each sprint lands as a PR in StudioControlRoom.",
+  "description": "Internal engineering sprint (code lives in StudioControlRoom, run with workdir={{soft}}): for each unchecked line in the backlog → named agent builds on the local model (build must pass) → QA (local) → one Opus review → tick backlog → ship (commit, PR, CI, auto-merge per policy). Each sprint lands as a PR in StudioControlRoom.",
   "required": [],
   "defaults": {
     "backlog": "{{home}}/docs/internal/eng-backlog.md",
     "sprint": "1",
-    "workdir": "{{soft}}"
+    "workdir": "{{soft}}",
+    "repo": "chalupuh/StudioControlRoom",
+    "title": "feat: internal sprint {{sprint}}"
   },
   "stages": [
     {
@@ -81,21 +83,18 @@
       "task": "Review the whole internal sprint: every unchecked task in {{backlog}}, {{home}}/docs/internal/sprint-log.md and {{home}}/docs/internal/qa/*.md. Read the changed files. Write {{home}}/docs/internal/review-sprint{{sprint}}.md with findings (Blocker / Should fix / Nit, file:line, fix) and end with 'APPROVE' or 'REQUEST CHANGES'.",
       "expect": [
         "docs/internal/review-sprint{{sprint}}.md"
-      ]
-    },
-    {
-      "id": "owner-demo",
-      "type": "gate",
-      "title": "Internal sprint done: try it in the Control Room, then approve to tick the backlog",
-      "show": [
-        "{{home}}/docs/internal/review-sprint{{sprint}}.md",
-        "{{home}}/docs/internal/sprint-log.md"
-      ]
+      ],
+      "check": "node -e \"if(!/APPROVEs*$/.test(require('fs').readFileSync('{{home}}/docs/internal/review-sprint{{sprint}}.md','utf8').trim()))process.exit(1)\""
     },
     {
       "id": "tick",
       "type": "script",
       "run": "node -e \"const f='{{backlog}}',fs=require('fs');fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/^- \\[ \\] /gm,'- [x] '))\""
+    },
+    {
+      "id": "ship",
+      "type": "script",
+      "run": "node \"{{home}}/tools/ci/ship-branch.js\" \"{{workdir}}\" {{repo}} \"{{title}}\" \"{{home}}/docs/internal/review-sprint{{sprint}}.md\""
     }
   ]
 }
