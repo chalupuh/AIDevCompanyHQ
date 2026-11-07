@@ -12,7 +12,7 @@ export function Portrait({ id, c, size }: { id: string; c?: Character; size: num
   }
   const fill = c?.color || 'var(--faint)';
   return (
-    <svg className="o-portrait" width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
+    <svg className="o-portrait o-avatar-fallback" width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
       <rect width="100" height="100" fill={fill} />
       <circle cx="50" cy="38" r="18" fill="#fff" opacity=".22" />
       <path d="M14 100c0-22 16-36 36-36s36 14 36 36z" fill="#fff" opacity=".22" />

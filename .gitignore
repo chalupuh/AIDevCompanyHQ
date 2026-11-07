@@ -12,3 +12,11 @@ node_modules/
 *.log
 # local tooling caches
 tools/bench/results/*/*.md
+
+# machine-local config (paths differ per PC; keep template in code)
+.studio/machine.json
+# agent scratch files (Sprint 1 review S5)
+temp_*
+**/temp_*
+.studio/*progress*
+.studio/run_build.json
