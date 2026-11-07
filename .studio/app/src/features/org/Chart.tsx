@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { StudioState } from '../../api';
 import type { AgentLive } from '../../store';
 import { AgentCard } from './AgentCard';
@@ -7,6 +7,79 @@ import { TEAM_VAR, type Dept, type Packet } from './model';
 export const CARD_W = 196;
 export const GAP = 14;
 const CONN_H = 36;
+
+/* ---- Zoom / pan helpers ---- */
+const ZOOM_MIN = 0.4;
+const ZOOM_MAX = 2;
+const ZOOM_STEP = 0.12;
+const WHEEL_FACTOR = 0.0015;
+
+function clamp(val: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, val)); }
+
+function useZoomPan(containerRef: React.RefObject<HTMLDivElement | null>) {
+  const [scale, setScale] = useState(1);
+  const [tx, setTx] = useState(0);
+  const [ty, setTy] = useState(0);
+  const dragging = useRef(false);
+  const lastPt = useRef({ x: 0, y: 0 });
+
+  const applyDelta = useCallback((dx: number, dy: number) => {
+    setTx((prev) => clamp(prev + dx, -1200, 1200));
+    setTy((prev) => clamp(prev + dy, -600, 600));
+  }, []);
+
+  const zoom = useCallback((factor: number) => {
+    setScale((prev) => clamp(prev + factor, ZOOM_MIN, ZOOM_MAX));
+  }, []);
+
+  const reset = useCallback(() => { setScale(1); setTx(0); setTy(0); }, []);
+
+  /* ctrl/cmd + wheel → zoom */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const factor = -e.deltaY * WHEEL_FACTOR;
+      setScale((prev) => clamp(prev + factor, ZOOM_MIN, ZOOM_MAX));
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, [containerRef]);
+
+  /* mouse drag → pan */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      dragging.current = true;
+      lastPt.current = { x: e.clientX, y: e.clientY };
+      el.style.cursor = 'grabbing';
+    };
+    const onMove = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      applyDelta(e.clientX - lastPt.current.x, e.clientY - lastPt.current.y);
+      lastPt.current = { x: e.clientX, y: e.clientY };
+    };
+    const onUp = () => {
+      dragging.current = false;
+      if (el) el.style.cursor = '';
+    };
+    el.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      el.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [containerRef, applyDelta]);
+
+  return { scale, tx, ty, zoom, reset };
+}
 
 interface Common {
   state: StudioState; live: Record<string, AgentLive>; onOpen: (id: string) => void;
@@ -80,15 +153,33 @@ function Lane({ dept, state, live, onOpen, packets }: Common & { dept: Dept; pac
 
 export function Chart({ depts, packets, ...common }: Common & { depts: Dept[]; packets: Packet[] }) {
   const owner = common.state.roster?.agents?.owner;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scale, tx, ty, zoom, reset } = useZoomPan(containerRef);
+
   return (
     <div className="o-chart">
-      <div className="o-owner" style={{ ['--accent' as string]: 'var(--owner)' }}>
-        <AgentCard id="owner" c={owner ? { ...owner, title: owner.title || 'Owner' } : { name: 'Owner', title: 'Owner · you decide at the gates', team: 'owner', color: '#fbbf24', bio: '' }}
-          team="owner" live={common.live.owner} models={common.state.models?.owner} head onOpen={common.onOpen} />
+      <div className="o-zoom-bar" aria-label="Chart zoom controls">
+        <button type="button" className="o-zoom-btn" title="Zoom out" aria-label="Zoom out" onClick={() => zoom(-ZOOM_STEP)}>-</button>
+        <button type="button" className="o-zoom-btn" title="Reset zoom" aria-label="Reset zoom" onClick={reset}>⌂</button>
+        <button type="button" className="o-zoom-btn" title="Zoom in" aria-label="Zoom in" onClick={() => zoom(ZOOM_STEP)}>+</button>
       </div>
-      <div className="o-spine" aria-hidden="true" />
-      <div className="o-depts">
-        {depts.map((d) => <Lane key={d.team} dept={d} {...common} packets={packets} />)}
+      <div className="o-zoom-viewport" ref={containerRef} style={{ cursor: 'grab' }}>
+        <div
+          className="o-zoom-canvas"
+          style={{
+            transform: `scale(${scale}) translate(${tx / scale}px, ${ty / scale}px)`,
+            transformOrigin: 'top center',
+          }}
+        >
+          <div className="o-owner" style={{ ['--accent' as string]: 'var(--owner)' }}>
+            <AgentCard id="owner" c={owner ? { ...owner, title: owner.title || 'Owner' } : { name: 'Owner', title: 'Owner · you decide at the gates', team: 'owner', color: 'var(--owner)', bio: '' }}
+              team="owner" live={common.live.owner} models={common.state.models?.owner} head onOpen={common.onOpen} />
+          </div>
+          <div className="o-spine" aria-hidden="true" />
+          <div className="o-depts">
+            {depts.map((d) => <Lane key={d.team} dept={d} {...common} packets={packets} />)}
+          </div>
+        </div>
       </div>
     </div>
   );
