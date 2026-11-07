@@ -4,28 +4,28 @@
   "defaults": {},
   "stages": [
     { "id": "spec", "type": "agent", "agent": "product-manager", "tier": "local", "maxTurns": 25,
-      "task": "Lite track. Write docs/specs/{{slug}}.md (spec + UX section) from the idea file {{idea}}.",
-      "expect": ["docs/specs/{{slug}}.md"] },
+      "task": "Lite track. Write {{home}}/docs/specs/{{slug}}.md (spec + UX section) from the idea file {{idea}}.",
+      "expect": ["{{home}}/docs/specs/{{slug}}.md"] },
     { "id": "design", "type": "agent", "agent": "architect", "tier": "opus", "maxTurns": 25,
-      "task": "Lite track. Write the one-page docs/specs/{{slug}}.design.md for docs/specs/{{slug}}.md. Use headings exactly '## Milestone N: <name>' for each milestone.",
-      "expect": ["docs/specs/{{slug}}.design.md"],
-      "check": "node -e \"if(!/^## Milestone \\d/m.test(require('fs').readFileSync('docs/specs/{{slug}}.design.md','utf8')))process.exit(1)\"" },
-    { "id": "approve-plan", "type": "gate", "title": "{{slug}}: approve spec + design (answer open questions in the spec first)", "show": ["docs/specs/{{slug}}.md", "docs/specs/{{slug}}.design.md"] },
-    { "id": "milestones", "type": "foreach", "items": { "file": "docs/specs/{{slug}}.design.md", "regex": "^## (Milestone \\d+:.*)$" },
+      "task": "Lite track. Write the one-page {{home}}/docs/specs/{{slug}}.design.md for {{home}}/docs/specs/{{slug}}.md. Use headings exactly '## Milestone N: <name>' for each milestone.",
+      "expect": ["{{home}}/docs/specs/{{slug}}.design.md"],
+      "check": "node -e \"if(!/^## Milestone \\d/m.test(require('fs').readFileSync('{{home}}/docs/specs/{{slug}}.design.md','utf8')))process.exit(1)\"" },
+    { "id": "approve-plan", "type": "gate", "title": "{{slug}}: approve spec + design (answer open questions in the spec first)", "show": ["{{home}}/docs/specs/{{slug}}.md", "{{home}}/docs/specs/{{slug}}.design.md"] },
+    { "id": "milestones", "type": "foreach", "items": { "file": "{{home}}/docs/specs/{{slug}}.design.md", "regex": "^## (Milestone \\d+:.*)$" },
       "stages": [
-        { "id": "build", "type": "agent", "agent": "__team_lead__", "designDoc": "docs/specs/{{slug}}.design.md", "tier": "local", "maxTurns": 60, "timeoutMin": 60,
-          "task": "Implement '{{item}}' from docs/specs/{{slug}}.design.md (only that milestone). Use the Team role named in design.md; follow its rules. Run lint/typecheck/tests before finishing." },
+        { "id": "build", "type": "agent", "agent": "__team_lead__", "designDoc": "{{home}}/docs/specs/{{slug}}.design.md", "tier": "local", "maxTurns": 60, "timeoutMin": 60,
+          "task": "Implement '{{item}}' from {{home}}/docs/specs/{{slug}}.design.md (only that milestone). Use the Team role named in design.md; follow its rules. Run lint/typecheck/tests before finishing." },
         { "id": "qa", "type": "agent", "agent": "qa-engineer", "tier": "local", "maxTurns": 40,
-          "task": "QA '{{item}}' of {{slug}} against docs/specs/{{slug}}.md. Write docs/specs/{{slug}}.qa-m{{n}}.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL'.",
-          "rework": { "to": "build", "verdict": "docs/specs/{{slug}}.qa-m{{n}}.md", "max": 3 },
-          "expect": ["docs/specs/{{slug}}.qa-m{{n}}.md"],
-          "check": "node -e \"if(!/VERDICT: PASS/.test(require('fs').readFileSync('docs/specs/{{slug}}.qa-m{{n}}.md','utf8')))process.exit(1)\"" },
+          "task": "QA '{{item}}' of {{slug}} against {{home}}/docs/specs/{{slug}}.md. Write {{home}}/docs/specs/{{slug}}.qa-m{{n}}.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL'.",
+          "rework": { "to": "build", "verdict": "{{home}}/docs/specs/{{slug}}.qa-m{{n}}.md", "max": 3 },
+          "expect": ["{{home}}/docs/specs/{{slug}}.qa-m{{n}}.md"],
+          "check": "node -e \"if(!/VERDICT: PASS/.test(require('fs').readFileSync('{{home}}/docs/specs/{{slug}}.qa-m{{n}}.md','utf8')))process.exit(1)\"" },
         { "id": "review", "type": "agent", "agent": "code-reviewer", "tier": "opus", "maxTurns": 25,
-          "task": "Review the whole diff for '{{item}}' of {{slug}}. Write docs/specs/{{slug}}.review-m{{n}}.md ending with 'APPROVE' or 'REQUEST CHANGES'.",
-          "rework": { "to": "build", "verdict": "docs/specs/{{slug}}.review-m{{n}}.md", "failRegex": "REQUEST CHANGES\\s*$", "max": 3 },
-          "expect": ["docs/specs/{{slug}}.review-m{{n}}.md"],
-          "check": "node -e \"if(!/APPROVE\\s*$/.test(require('fs').readFileSync('docs/specs/{{slug}}.review-m{{n}}.md','utf8').trim()))process.exit(1)\"" }
+          "task": "Review the whole diff for '{{item}}' of {{slug}}. Write {{home}}/docs/specs/{{slug}}.review-m{{n}}.md ending with 'APPROVE' or 'REQUEST CHANGES'.",
+          "rework": { "to": "build", "verdict": "{{home}}/docs/specs/{{slug}}.review-m{{n}}.md", "failRegex": "REQUEST CHANGES\\s*$", "max": 3 },
+          "expect": ["{{home}}/docs/specs/{{slug}}.review-m{{n}}.md"],
+          "check": "node -e \"if(!/APPROVE\\s*$/.test(require('fs').readFileSync('{{home}}/docs/specs/{{slug}}.review-m{{n}}.md','utf8').trim()))process.exit(1)\"" }
       ] },
-    { "id": "ship-gate", "type": "gate", "title": "{{slug}}: all milestones passed QA + review. OK to prepare release?", "show": ["docs/specs/{{slug}}.design.md"] }
+    { "id": "ship-gate", "type": "gate", "title": "{{slug}}: all milestones passed QA + review. OK to prepare release?", "show": ["{{home}}/docs/specs/{{slug}}.design.md"] }
   ]
 }
