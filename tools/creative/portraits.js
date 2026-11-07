@@ -4,7 +4,7 @@
 // Writes candidates to .studio/portraits/candidates/<id>_<seed>.png. The Creative Director picks
 // the winner and copies it to .studio/portraits/<id>.png (see pipeline creative-portraits).
 const fs = require('fs'), path = require('path'), { spawnSync } = require('child_process');
-const REPO = path.resolve(__dirname, '..', '..');
+const REPO = process.env.STUDIO_HOME ? path.resolve(process.env.STUDIO_HOME) : path.resolve(__dirname, '..', '..');
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 
 const STYLE = 'clean modern anime illustration, bust portrait, looking at viewer, soft studio lighting, crisp lineart, ' +
