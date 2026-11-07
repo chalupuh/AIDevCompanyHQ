@@ -44,6 +44,9 @@ On GitHub **Free**, private repos cannot have branch protection or rulesets (the
 - **Engine:** per task it creates a branch, has the agent build, commits, pushes and opens a PR (`gh pr create`). QA runs, the reviewer posts a review, and the owner gate merges.
 - **Never** force-push to `main`, rewrite published history, or change branch protection without the owner.
 
+## Status of the split (2026-11-07)
+Done. StudioControlRoom was created from HQ main @ 85438a4 (history stays in HQ). HQ keeps forwarding shims at `.studio/studio.js` and `tools/engine/engine.js`, and its CI now runs `tools/ci/check-config.js`. Software CI (typecheck, tests, build, engine self-tests) runs in StudioControlRoom.
+
 ## Consequences
 - The studio software and the org config version separately. The HQ repo pins a known-good StudioControlRoom version.
 - Splitting the software out of this folder means paths in `studio.js` and `engine.js` must come from config (`STUDIO_HOME`). This is done as the first PR in `StudioControlRoom`, **after** the current internal sprint finishes, so no files move under a running pipeline.
