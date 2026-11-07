@@ -1,0 +1,7 @@
+# Sprint 3, Lane E: Lane-aware events (StudioControlRoom, branch feat/s3-lane-tagging)
+Start AFTER Sprint 2 lanes A/B/C have merged. Paths are relative to the StudioControlRoom checkout. `node engine/test.js` and the app build must pass.
+
+**Contract (shared with Lane F):** every event may carry `run` (engine run id), `lane` (short label: vars.lane, else vars.sprint, else the pipeline name) and `pipeline`. Add these optional fields to `StudioEvent` in studio/app/src/api.ts in your FIRST task, exactly as: `run?: string; lane?: string; pipeline?: string;`.
+
+- [ ] [backend-dev] Engine tagging: in engine/engine.js add run, lane and pipeline to every event the engine writes (start, done, progress, usage, gate). Pass them to agent processes as env STUDIO_RUN, STUDIO_LANE and STUDIO_PIPELINE. Add the three optional fields to StudioEvent in studio/app/src/api.ts. Selftest: events from a temp-HOME foreach run carry run and lane. Run node engine/test.js.
+- [ ] [backend-dev] Hook and CLI tagging: in studio/studio.js, when STUDIO_RUN / STUDIO_LANE / STUDIO_PIPELINE are set in the environment, add them to events written by `hook` (tool calls, SubagentStop) and by `log`. Expose a `lanes` summary in GET /api/state: for each running run, {run, lane, pipeline, status, stage, agentsActive: [agent ids with a start but no done in that run]}. Add the type to StudioState in api.ts. App build must pass.
