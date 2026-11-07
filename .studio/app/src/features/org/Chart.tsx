@@ -13,6 +13,7 @@ const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.12;
 const WHEEL_FACTOR = 0.0015;
+const DRAG_THRESHOLD = 4; /* px moved before a drag cancels the next click */
 
 function clamp(val: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, val)); }
 
@@ -20,8 +21,6 @@ function useZoomPan(containerRef: React.RefObject<HTMLDivElement | null>) {
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
-  const dragging = useRef(false);
-  const lastPt = useRef({ x: 0, y: 0 });
 
   const applyDelta = useCallback((dx: number, dy: number) => {
     setTx((prev) => clamp(prev + dx, -1200, 1200));
@@ -48,25 +47,56 @@ function useZoomPan(containerRef: React.RefObject<HTMLDivElement | null>) {
     return () => el.removeEventListener('wheel', handler);
   }, [containerRef]);
 
-  /* mouse drag → pan */
+  const isDragging = useRef(false);
+  const last = useRef({ x: 0, y: 0 });
+
+  /* Shared pan logic: mouse + touch */
+  const handleStart = useCallback((x: number, y: number) => {
+    isDragging.current = true;
+    last.current = { x, y };
+  }, []);
+  const handleMove = useCallback((x: number, y: number) => {
+    if (!isDragging.current) return;
+    applyDelta(x - last.current.x, y - last.current.y);
+    last.current = { x, y };
+  }, [applyDelta]);
+  const handleEnd = useCallback(() => { isDragging.current = false; }, []);
+
+  /* mouse drag → pan; ignore clicks on buttons / links / cards */
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
+    const origin = { x: 0, y: 0 };
+    let moved = false;
+    let panning = false;
+
     const onDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
-      dragging.current = true;
-      lastPt.current = { x: e.clientX, y: e.clientY };
-      el.style.cursor = 'grabbing';
+      if ((e.target as HTMLElement).closest('button, a, .o-card, .o-toggle')) return;
+      e.preventDefault(); /* no text selection / native drag while panning */
+      origin.x = e.clientX; origin.y = e.clientY;
+      moved = false;
+      panning = true;
+      handleStart(e.clientX, e.clientY);
+      el.classList.add('dragging');
     };
     const onMove = (e: MouseEvent) => {
-      if (!dragging.current) return;
-      applyDelta(e.clientX - lastPt.current.x, e.clientY - lastPt.current.y);
-      lastPt.current = { x: e.clientX, y: e.clientY };
+      if (!panning) return;
+      if (Math.hypot(e.clientX - origin.x, e.clientY - origin.y) > DRAG_THRESHOLD) moved = true;
+      handleMove(e.clientX, e.clientY);
     };
     const onUp = () => {
-      dragging.current = false;
-      if (el) el.style.cursor = '';
+      if (!panning) return;
+      panning = false;
+      handleEnd();
+      el.classList.remove('dragging');
+      /* a drag must not open a card: swallow the click that follows it */
+      if (moved) {
+        const swallow = (ev: MouseEvent) => { ev.stopPropagation(); ev.preventDefault(); };
+        window.addEventListener('click', swallow, { capture: true, once: true });
+        setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 0);
+      }
     };
     el.addEventListener('mousedown', onDown);
     window.addEventListener('mousemove', onMove);
@@ -76,7 +106,35 @@ function useZoomPan(containerRef: React.RefObject<HTMLDivElement | null>) {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [containerRef, applyDelta]);
+  }, [containerRef, handleStart, handleMove, handleEnd]);
+
+  /* touch drag → pan; prevent native scroll while panning */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      handleStart(t.clientX, t.clientY);
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!isDragging.current) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      handleMove(t.clientX, t.clientY);
+    };
+    const onEnd = () => { handleEnd(); };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd);
+    el.addEventListener('touchcancel', onEnd);
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+      el.removeEventListener('touchcancel', onEnd);
+    };
+  }, [containerRef, handleStart, handleMove, handleEnd]);
 
   return { scale, tx, ty, zoom, reset };
 }
@@ -163,7 +221,7 @@ export function Chart({ depts, packets, ...common }: Common & { depts: Dept[]; p
         <button type="button" className="o-zoom-btn" title="Reset zoom" aria-label="Reset zoom" onClick={reset}>⌂</button>
         <button type="button" className="o-zoom-btn" title="Zoom in" aria-label="Zoom in" onClick={() => zoom(ZOOM_STEP)}>+</button>
       </div>
-      <div className="o-zoom-viewport" ref={containerRef} style={{ cursor: 'grab' }}>
+      <div className="o-zoom-viewport" ref={containerRef}>
         <div
           className="o-zoom-canvas"
           style={{

@@ -121,10 +121,9 @@ const jsonLine = (obj) => JSON.stringify(obj);
   assert('usage parsed correctly', r.usage.in === 1000 && r.usage.out === 500 && r.usage.cached === 200);
 }
 
-// ---- Test 11: THE KEY BUG — unrecognized_model + is_error + non-zero + no result → SUPPRESSED ----
-// This is the exact scenario that caused the false failure reported in the sprint.
-// Claude Code exits with is_error=true and status!=0 because the model name isn't
-// recognized by its wrapper, but the local model still completed the work.
+// ---- Test 11: unrecognized_model + is_error + non-zero + no result → ERROR REPORTED ----
+// The unrecognized_model warning is logged to ignoredWarning but does NOT suppress the error.
+// A real failure signal (is_error + non-zero exit) with no result must be reported.
 {
   const stderr = '[claude-code:unrecognized_model] {"model":"qwen3.6:27b","query_source":"sdk"}';
   const r = parseRunOutput({
@@ -132,8 +131,8 @@ const jsonLine = (obj) => JSON.stringify(obj);
     stdout: jsonLine({ num_turns: 3, is_error: true }),
     stderr,
   });
-  assert('unrecognized_model + failure + no result → error suppressed', r.error === null);
-  assert('unrecognized_model → ignoredWarning populated', r.ignoredWarning !== null);
+  assert('unrecognized_model + failure + no result → error reported (not suppressed)', r.error !== null);
+  assert('unrecognized_model → ignoredWarning still logged', r.ignoredWarning !== null);
   assert('unrecognized_model → ignoredWarning contains the message', r.ignoredWarning.includes('[claude-code:unrecognized_model]'));
   assert('unrecognized_model → turns still parsed', r.turns === 3);
 }
@@ -151,14 +150,15 @@ const jsonLine = (obj) => JSON.stringify(obj);
 }
 
 // ---- Test 13: stderr contains unrecognized_model mid-stream (surrounded by other text) ----
+// The warning is logged but does not suppress the error.
 {
   const r = parseRunOutput({
     status: 1,
     stdout: jsonLine({ num_turns: 2, is_error: true }),
     stderr: 'some other log\n[claude-code:unrecognized_model] {"model":"qwen3.6:27b","query_source":"sdk"}\nexit',
   });
-  assert('unrecognized_model buried in stderr → still suppressed', r.error === null);
-  assert('unrecognized_model buried → ignoredWarning set', r.ignoredWarning !== null);
+  assert('unrecognized_model buried in stderr → error reported (not suppressed)', r.error !== null);
+  assert('unrecognized_model buried → ignoredWarning still logged', r.ignoredWarning !== null);
 }
 
 // ---- Test 14: no unrecognized_model warning + real failure → still reported as error ----
@@ -170,6 +170,50 @@ const jsonLine = (obj) => JSON.stringify(obj);
   });
   assert('genuine failure without model warning → error reported', r.error !== null);
   assert('genuine failure → ignoredWarning is null', r.ignoredWarning === null);
+}
+
+// ---- Test 15: timeout — status null, signal SIGTERM, no result → error reported ----
+// spawnSync returns { status: null, signal: 'SIGTERM' } when the child is killed by timeout.
+{
+  const r = parseRunOutput({
+    status: null,
+    signal: 'SIGTERM',
+    stdout: jsonLine({ num_turns: 0, is_error: false }),
+    stderr: 'Timed out after 30m',
+  });
+  assert('timeout (signal SIGTERM, no result) → error reported', r.error !== null);
+  assert('timeout → stderr captured in error', r.error.includes('Timed out'));
+  assert('timeout → ignoredWarning is null', r.ignoredWarning === null);
+}
+
+// ---- Test 16: direct verify() test — empty result triggers "empty final answer" ----
+{
+  const { verify } = require('./engine');
+  const resError = parseRunOutput({
+    status: 1,
+    stdout: jsonLine({ num_turns: 0, is_error: true }),
+    stderr: 'something went wrong',
+  });
+  const problems1 = verify({ type: 'agent', id: 'test', expect: [] }, {}, resError);
+  assert('verify() with error + empty result → reports both error and empty answer',
+    problems1.some((p) => p.startsWith('run error:')) && problems1.some((p) => p === 'empty final answer'));
+
+  const resOk = parseRunOutput({
+    status: 0,
+    stdout: jsonLine({ num_turns: 3, is_error: false, result: 'all done' }),
+  });
+  const problems2 = verify({ type: 'agent', id: 'test', expect: [] }, {}, resOk);
+  assert('verify() with clean success → no problems', problems2.length === 0);
+
+  // verify() "empty final answer" fires even when ignoredWarning is set (no bypass)
+  const resWarnEmpty = parseRunOutput({
+    status: 1,
+    stdout: jsonLine({ num_turns: 2, is_error: true }),
+    stderr: '[claude-code:unrecognized_model] warning text',
+  });
+  const problems3 = verify({ type: 'agent', id: 'test', expect: [] }, {}, resWarnEmpty);
+  assert('verify() with ignoredWarning + empty result → empty final answer still reported',
+    problems3.some((p) => p === 'empty final answer'));
 }
 
 // ---- Summary ----
