@@ -1,0 +1,14 @@
+# dependencies / builds
+node_modules/
+.studio/app-dist/
+# runtime state (changes every second; not source)
+.studio/events.jsonl
+.studio/control.json
+.studio/runs/
+.studio/checkpoints/
+.studio/engine-smoke/
+.studio/portraits/candidates/
+*.part
+*.log
+# local tooling caches
+tools/bench/results/*/*.md

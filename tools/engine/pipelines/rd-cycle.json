@@ -1,0 +1,119 @@
+{
+  "description": "R&D cycle: brief → scan (local) → 2 analysts (local) → R&D Manager calibration (Opus) → owner decision.",
+  "required": [
+    "theme"
+  ],
+  "defaults": {
+    "cycle": "{{date}}"
+  },
+  "stages": [
+    {
+      "id": "brief",
+      "type": "agent",
+      "agent": "rd-manager",
+      "tier": "local",
+      "maxTurns": 10,
+      "task": "Fill docs/research/brief-template.md into docs/research/cycles/{{date}}/brief.md. Theme: {{theme}}. Read docs/research/backlog.md so covered ideas are skipped.",
+      "expect": [
+        "docs/research/cycles/{{date}}/brief.md"
+      ]
+    },
+    {
+      "id": "scan",
+      "type": "agent",
+      "agent": "market-researcher",
+      "tier": "sonnet",
+      "maxTurns": 40,
+      "timeoutMin": 45,
+      "task": "Run the scan for the R&D cycle in docs/research/cycles/{{date}}/brief.md, following your role file and docs/research/METHODOLOGY.md. Write docs/research/cycles/{{date}}/scan.md. End scan.md with a line 'ANALYZE: slug1, slug2, ...' listing the ~6 ideas for analysis.",
+      "expect": [
+        "docs/research/cycles/{{date}}/scan.md"
+      ],
+      "check": "node -e \"if(!/ANALYZE:/.test(require('fs').readFileSync('docs/research/cycles/{{date}}/scan.md','utf8')))process.exit(1)\"",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "WebSearch",
+        "WebFetch",
+        "Bash(node .studio/studio.js*)"
+      ],
+      "note": "Web research needs WebSearch, an Anthropic server tool: unavailable on local models (ADR 0001). Analysts stay local and use WebFetch only if needed."
+    },
+    {
+      "id": "analyze-a",
+      "type": "agent",
+      "agent": "opportunity-analyst",
+      "tier": "local",
+      "maxTurns": 40,
+      "timeoutMin": 45,
+      "task": "Analyze the FIRST HALF of the ideas on the 'ANALYZE:' line at the end of docs/research/cycles/{{date}}/scan.md. Write one docs/research/ideas/<slug>.md per idea, per your role file.",
+      "expect": [
+        "docs/research/cycles/{{date}}/scan.md"
+      ],
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "WebSearch",
+        "WebFetch",
+        "Bash(node .studio/studio.js*)"
+      ]
+    },
+    {
+      "id": "analyze-b",
+      "type": "agent",
+      "agent": "opportunity-analyst",
+      "tier": "local",
+      "maxTurns": 40,
+      "timeoutMin": 45,
+      "task": "Analyze the SECOND HALF of the ideas on the 'ANALYZE:' line at the end of docs/research/cycles/{{date}}/scan.md. Write one docs/research/ideas/<slug>.md per idea, per your role file.",
+      "expect": [
+        "docs/research/cycles/{{date}}/scan.md"
+      ],
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "WebSearch",
+        "WebFetch",
+        "Bash(node .studio/studio.js*)"
+      ]
+    },
+    {
+      "id": "calibrate",
+      "type": "agent",
+      "agent": "rd-manager",
+      "tier": "opus",
+      "maxTurns": 30,
+      "task": "Mode B for the cycle in docs/research/cycles/{{date}}/: calibrate, rank, write proposal.md with the Owner decision block, update docs/research/backlog.md.",
+      "expect": [
+        "docs/research/cycles/{{date}}/proposal.md"
+      ],
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "WebSearch",
+        "WebFetch",
+        "Bash(node .studio/studio.js*)"
+      ]
+    },
+    {
+      "id": "owner-decision",
+      "type": "gate",
+      "title": "R&D proposal {{date}}: pick what to build",
+      "show": [
+        "docs/research/cycles/{{date}}/proposal.md"
+      ]
+    }
+  ]
+}

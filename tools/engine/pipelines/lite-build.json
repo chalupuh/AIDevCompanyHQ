@@ -1,0 +1,29 @@
+{
+  "description": "Lite-track build (Ease 4-5): spec+UX (local) → design (Opus) → owner gate → per milestone: build (local) → QA (local) → review (Opus) → owner ship gate.",
+  "required": ["slug", "idea"],
+  "defaults": {},
+  "stages": [
+    { "id": "spec", "type": "agent", "agent": "product-manager", "tier": "local", "maxTurns": 25,
+      "task": "Lite track. Write docs/specs/{{slug}}.md (spec + UX section) from the idea file {{idea}}.",
+      "expect": ["docs/specs/{{slug}}.md"] },
+    { "id": "design", "type": "agent", "agent": "architect", "tier": "opus", "maxTurns": 25,
+      "task": "Lite track. Write the one-page docs/specs/{{slug}}.design.md for docs/specs/{{slug}}.md. Use headings exactly '## Milestone N: <name>' for each milestone.",
+      "expect": ["docs/specs/{{slug}}.design.md"],
+      "check": "node -e \"if(!/^## Milestone \\d/m.test(require('fs').readFileSync('docs/specs/{{slug}}.design.md','utf8')))process.exit(1)\"" },
+    { "id": "approve-plan", "type": "gate", "title": "{{slug}}: approve spec + design (answer open questions in the spec first)", "show": ["docs/specs/{{slug}}.md", "docs/specs/{{slug}}.design.md"] },
+    { "id": "milestones", "type": "foreach", "items": { "file": "docs/specs/{{slug}}.design.md", "regex": "^## (Milestone \\d+:.*)$" },
+      "stages": [
+        { "id": "build", "type": "agent", "agent": "mobile-dev", "tier": "local", "maxTurns": 60, "timeoutMin": 60,
+          "task": "Implement '{{item}}' from docs/specs/{{slug}}.design.md (only that milestone). Use the Team role named in design.md; follow its rules. Run lint/typecheck/tests before finishing." },
+        { "id": "qa", "type": "agent", "agent": "qa-engineer", "tier": "local", "maxTurns": 40,
+          "task": "QA '{{item}}' of {{slug}} against docs/specs/{{slug}}.md. Write docs/specs/{{slug}}.qa-m{{n}}.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL'.",
+          "expect": ["docs/specs/{{slug}}.qa-m{{n}}.md"],
+          "check": "node -e \"if(!/VERDICT: PASS/.test(require('fs').readFileSync('docs/specs/{{slug}}.qa-m{{n}}.md','utf8')))process.exit(1)\"" },
+        { "id": "review", "type": "agent", "agent": "code-reviewer", "tier": "opus", "maxTurns": 25,
+          "task": "Review the whole diff for '{{item}}' of {{slug}}. Write docs/specs/{{slug}}.review-m{{n}}.md ending with 'APPROVE' or 'REQUEST CHANGES'.",
+          "expect": ["docs/specs/{{slug}}.review-m{{n}}.md"],
+          "check": "node -e \"if(!/APPROVE\\s*$/.test(require('fs').readFileSync('docs/specs/{{slug}}.review-m{{n}}.md','utf8').trim()))process.exit(1)\"" }
+      ] },
+    { "id": "ship-gate", "type": "gate", "title": "{{slug}}: all milestones passed QA + review. OK to prepare release?", "show": ["docs/specs/{{slug}}.design.md"] }
+  ]
+}

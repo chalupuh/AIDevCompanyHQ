@@ -1,0 +1,12 @@
+{
+  "description": "Engine self-test: local agent writes a file, a check verifies it, owner gate, deterministic script.",
+  "required": [],
+  "defaults": { "out": ".studio/engine-smoke/hello.md" },
+  "stages": [
+    { "id": "write-note", "type": "agent", "agent": "product-manager", "tier": "local", "maxTurns": 8,
+      "task": "Write the file {{out}} containing exactly three Given/When/Then acceptance criteria for: 'tap a button to log one glass of water'. Nothing else.",
+      "expect": ["{{out}}"], "check": "node -e \"const t=require('fs').readFileSync('{{out}}','utf8'); if((t.match(/Given/g)||[]).length<3) process.exit(1)\"" },
+    { "id": "owner-check", "type": "gate", "title": "Smoke test: approve the note?", "show": ["{{out}}"] },
+    { "id": "stamp", "type": "script", "run": "node -e \"require('fs').appendFileSync('{{out}}','\\n<!-- approved by owner -->\\n')\"" }
+  ]
+}

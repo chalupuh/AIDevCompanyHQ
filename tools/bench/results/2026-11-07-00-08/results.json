@@ -1,0 +1,242 @@
+[
+  {
+    "model": "qwen3-coder:30b",
+    "role": "analyst",
+    "id": "score-idea",
+    "auto": 1,
+    "secs": 34.2,
+    "tps": 266,
+    "outTokens": 291,
+    "rubric": [
+      "Arithmetic shown and correct (66)",
+      "Justifications reference the evidence, not generic",
+      "MVP is small and drops photo ID or defers it given Ease 3",
+      "Concise"
+    ]
+  },
+  {
+    "model": "qwen3-coder:30b",
+    "role": "coding",
+    "id": "streak-forgiving",
+    "auto": 0,
+    "secs": 1.9,
+    "tps": 277,
+    "outTokens": 503,
+    "rubric": null
+  },
+  {
+    "model": "qwen3-coder:30b",
+    "role": "coding",
+    "id": "water-goal",
+    "auto": 1,
+    "secs": 0.6,
+    "tps": 259,
+    "outTokens": 138,
+    "rubric": null
+  },
+  {
+    "model": "qwen3-coder:30b",
+    "role": "qa",
+    "id": "catch-split-bug",
+    "auto": 0,
+    "secs": 2.8,
+    "tps": 275,
+    "outTokens": 748,
+    "rubric": null
+  },
+  {
+    "model": "qwen3-coder:30b",
+    "role": "researcher",
+    "id": "longlist-entry",
+    "auto": 1,
+    "secs": 0.8,
+    "tps": 261,
+    "outTokens": 190,
+    "rubric": [
+      "Uses only given evidence; no invented numbers",
+      "Gap = one-time purchase + cross-device",
+      "Under 150 words",
+      "Sensible Hot/Warm call"
+    ]
+  },
+  {
+    "model": "qwen3-coder:30b",
+    "role": "tools",
+    "id": "checkpoint-on-pause",
+    "auto": 0,
+    "secs": 1.5,
+    "tps": 265,
+    "outTokens": 326,
+    "rubric": null
+  },
+  {
+    "model": "qwen3-coder:30b",
+    "role": "tools",
+    "id": "fix-and-test",
+    "auto": 1,
+    "secs": 2.3,
+    "tps": 230,
+    "outTokens": 455,
+    "rubric": null
+  },
+  {
+    "model": "qwen3.6:27b",
+    "role": "analyst",
+    "id": "score-idea",
+    "auto": 1,
+    "secs": 66.4,
+    "tps": 111,
+    "outTokens": 2657,
+    "rubric": [
+      "Arithmetic shown and correct (66)",
+      "Justifications reference the evidence, not generic",
+      "MVP is small and drops photo ID or defers it given Ease 3",
+      "Concise"
+    ]
+  },
+  {
+    "model": "qwen3.6:27b",
+    "role": "coding",
+    "id": "streak-forgiving",
+    "auto": 1,
+    "secs": 46.7,
+    "tps": 145,
+    "outTokens": 6729,
+    "rubric": null
+  },
+  {
+    "model": "qwen3.6:27b",
+    "role": "coding",
+    "id": "water-goal",
+    "auto": 1,
+    "secs": 17.2,
+    "tps": 160,
+    "outTokens": 2702,
+    "rubric": null
+  },
+  {
+    "model": "qwen3.6:27b",
+    "role": "qa",
+    "id": "catch-split-bug",
+    "auto": 0,
+    "secs": 27,
+    "tps": 168,
+    "outTokens": 4489,
+    "rubric": null
+  },
+  {
+    "model": "qwen3.6:27b",
+    "role": "researcher",
+    "id": "longlist-entry",
+    "auto": 1,
+    "secs": 9.2,
+    "tps": 146,
+    "outTokens": 1302,
+    "rubric": [
+      "Uses only given evidence; no invented numbers",
+      "Gap = one-time purchase + cross-device",
+      "Under 150 words",
+      "Sensible Hot/Warm call"
+    ]
+  },
+  {
+    "model": "qwen3.6:27b",
+    "role": "tools",
+    "id": "checkpoint-on-pause",
+    "auto": 1,
+    "secs": 1.9,
+    "tps": 156,
+    "outTokens": 198,
+    "rubric": null
+  },
+  {
+    "model": "qwen3.6:27b",
+    "role": "tools",
+    "id": "fix-and-test",
+    "auto": 0,
+    "secs": 4.8,
+    "tps": 155,
+    "outTokens": 594,
+    "rubric": null
+  },
+  {
+    "model": "qwen3:4b",
+    "role": "analyst",
+    "id": "score-idea",
+    "auto": 1,
+    "secs": 6.1,
+    "tps": 311,
+    "outTokens": 1248,
+    "rubric": [
+      "Arithmetic shown and correct (66)",
+      "Justifications reference the evidence, not generic",
+      "MVP is small and drops photo ID or defers it given Ease 3",
+      "Concise"
+    ]
+  },
+  {
+    "model": "qwen3:4b",
+    "role": "coding",
+    "id": "streak-forgiving",
+    "auto": 0,
+    "secs": 60.5,
+    "tps": 240,
+    "outTokens": 14493,
+    "rubric": null
+  },
+  {
+    "model": "qwen3:4b",
+    "role": "coding",
+    "id": "water-goal",
+    "auto": 1,
+    "secs": 15.7,
+    "tps": 280,
+    "outTokens": 4229,
+    "rubric": null
+  },
+  {
+    "model": "qwen3:4b",
+    "role": "qa",
+    "id": "catch-split-bug",
+    "auto": 0,
+    "secs": 28.9,
+    "tps": 265,
+    "outTokens": 7587,
+    "rubric": null
+  },
+  {
+    "model": "qwen3:4b",
+    "role": "researcher",
+    "id": "longlist-entry",
+    "auto": 1,
+    "secs": 2.6,
+    "tps": 291,
+    "outTokens": 667,
+    "rubric": [
+      "Uses only given evidence; no invented numbers",
+      "Gap = one-time purchase + cross-device",
+      "Under 150 words",
+      "Sensible Hot/Warm call"
+    ]
+  },
+  {
+    "model": "qwen3:4b",
+    "role": "tools",
+    "id": "checkpoint-on-pause",
+    "auto": 0,
+    "secs": 10.6,
+    "tps": 298,
+    "outTokens": 2994,
+    "rubric": null
+  },
+  {
+    "model": "qwen3:4b",
+    "role": "tools",
+    "id": "fix-and-test",
+    "auto": 0,
+    "secs": 24.5,
+    "tps": 253,
+    "outTokens": 6352,
+    "rubric": null
+  }
+]

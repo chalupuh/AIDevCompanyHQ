@@ -1,0 +1,32 @@
+[
+  {
+    "model": "qwen3-coder:30b",
+    "role": "qa",
+    "id": "catch-split-bug",
+    "auto": 0,
+    "secs": 16.7,
+    "tps": 257,
+    "outTokens": 875,
+    "rubric": null
+  },
+  {
+    "model": "qwen3.6:27b",
+    "role": "qa",
+    "id": "catch-split-bug",
+    "auto": 1,
+    "secs": 38.1,
+    "tps": 162,
+    "outTokens": 5196,
+    "rubric": null
+  },
+  {
+    "model": "qwen3:4b",
+    "role": "qa",
+    "id": "catch-split-bug",
+    "auto": 0,
+    "secs": 31.8,
+    "tps": 263,
+    "outTokens": 8085,
+    "rubric": null
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "studio-dashboard", "runtimeExecutable": "node", "runtimeArgs": [".studio/studio.js", "serve", "4777"], "port": 4777 }
+  ]
+}

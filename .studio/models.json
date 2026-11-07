@@ -1,0 +1,25 @@
+{
+  "_note": "Local models per worker. 'brain' (the Claude model) is read from .claude/agents/*.md automatically. 'installed' is checked on disk by studio.js.",
+  "comfyRoot": "C:/AI/ComfyUI_windows_portable/ComfyUI/models",
+  "agents": {
+    "image-artist": { "local": [
+      { "name": "Z-Image-Turbo", "role": "image generation", "kind": "file", "ref": "diffusion_models/z_image_turbo_bf16.safetensors" },
+      { "name": "Qwen-Image-Edit-2511", "role": "image editing", "kind": "file", "ref": "diffusion_models/qwen_image_edit_2511_fp8mixed.safetensors" },
+      { "name": "rembg", "role": "background removal", "kind": "file", "ref": "C:/AI/ComfyUI_windows_portable/python_embeded/Lib/site-packages/rembg" }
+    ]},
+    "video-producer": { "local": [
+      { "name": "Wan2.2 TI2V 5B", "role": "text/image to video", "kind": "file", "ref": "diffusion_models/wan2.2_ti2v_5B_fp16.safetensors" }
+    ]},
+    "copy-voice": { "local": [
+      { "name": "Kokoro-82M (pip kokoro-onnx)", "role": "voice-over (TTS)", "kind": "file", "ref": "C:/AI/ComfyUI_windows_portable/python_embeded/Lib/site-packages/kokoro_onnx" },
+      { "name": "Whisper large-v3-turbo", "role": "transcripts/captions", "kind": "file", "ref": "C:/AI/ComfyUI_windows_portable/python_embeded/Lib/site-packages/faster_whisper" }
+    ]},
+    "creative-director": { "local": [
+      { "name": "qwen3.6:27b", "role": "vision check / drafts", "kind": "ollama", "ref": "qwen3.6:27b" }
+    ]},
+    "frontend-dev":  { "local": [ { "name": "qwen3.6:27b", "role": "primary worker (planned, ADR 0001)", "kind": "ollama", "ref": "qwen3.6:27b" }, { "name": "qwen3-coder:30b", "role": "fast edits (planned)", "kind": "ollama", "ref": "qwen3-coder:30b" } ] },
+    "backend-dev":   { "local": [ { "name": "qwen3.6:27b", "role": "primary worker (planned, ADR 0001)", "kind": "ollama", "ref": "qwen3.6:27b" }, { "name": "qwen3-coder:30b", "role": "fast edits (planned)", "kind": "ollama", "ref": "qwen3-coder:30b" } ] },
+    "mobile-dev":    { "local": [ { "name": "qwen3.6:27b", "role": "primary worker (planned, ADR 0001)", "kind": "ollama", "ref": "qwen3.6:27b" }, { "name": "qwen3-coder:30b", "role": "fast edits (planned)", "kind": "ollama", "ref": "qwen3-coder:30b" } ] },
+    "market-researcher": { "local": [ { "name": "qwen3.6:27b", "role": "primary worker (planned, ADR 0001)", "kind": "ollama", "ref": "qwen3.6:27b" } ] }
+  }
+}

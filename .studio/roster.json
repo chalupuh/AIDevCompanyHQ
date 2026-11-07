@@ -1,0 +1,182 @@
+{
+  "agents": {
+    "owner": {
+      "name": "You",
+      "title": "Owner / CEO",
+      "team": "owner",
+      "color": "#f5c542",
+      "bio": "The person who owns the studio and makes the final calls. Approves gates and sets direction.",
+      "quote": "Ship it when it is right."
+    },
+    "manager": {
+      "name": "Kaito",
+      "title": "Eng. Manager / Orchestrator",
+      "team": "eng",
+      "color": "#3b6fd4",
+      "bio": "A calm captain-strategist who plans the work and keeps every team moving in step. Breaks goals into tasks and routes them to the right hands.",
+      "quote": "Steady hands, clear course.",
+      "parent": "owner",
+      "portrait": "/portraits/manager.png"
+    },
+    "rd-manager": {
+      "name": "Professor Rin",
+      "title": "R&D Manager",
+      "team": "rd",
+      "color": "#8e5bd6",
+      "bio": "Head of research who turns hunches into evidence. Leads the market and opportunity scouts.",
+      "quote": "Let us test that hypothesis.",
+      "parent": "owner",
+      "portrait": "/portraits/rd-manager.png"
+    },
+    "market-researcher": {
+      "name": "Sora",
+      "title": "Market Researcher",
+      "team": "rd",
+      "color": "#2fa7c9",
+      "bio": "Scouts the market for trends, competitors and gaps. Always looking at the horizon.",
+      "quote": "I see a gap out there.",
+      "parent": "rd-manager",
+      "portrait": "/portraits/market-researcher.png"
+    },
+    "opportunity-analyst": {
+      "name": "Mika",
+      "title": "Opportunity Analyst",
+      "team": "rd",
+      "color": "#d65a8e",
+      "bio": "Weighs ideas by upside, cost and risk. Turns raw findings into a ranked shortlist.",
+      "quote": "Numbers first, then instinct.",
+      "parent": "rd-manager",
+      "portrait": "/portraits/opportunity-analyst.png"
+    },
+    "product-manager": {
+      "name": "Hana",
+      "title": "Product Manager",
+      "team": "eng",
+      "color": "#e8845a",
+      "bio": "Defines what is worth building and for whom. Writes the specs the team builds from.",
+      "quote": "Start with the user.",
+      "parent": "manager",
+      "portrait": "/portraits/product-manager.png"
+    },
+    "architect": {
+      "name": "Daichi",
+      "title": "Software Architect",
+      "team": "eng",
+      "color": "#5a6b7d",
+      "bio": "Designs the system structure and makes the hard technical tradeoffs. Keeps things simple enough to last.",
+      "quote": "Draw the boundaries first.",
+      "parent": "manager",
+      "portrait": "/portraits/architect.png"
+    },
+    "ui-ux-designer": {
+      "name": "Yuki",
+      "title": "UI/UX Designer",
+      "team": "eng",
+      "color": "#7ad4c4",
+      "bio": "Shapes how the product looks and feels. Obsesses over small details that make it clear.",
+      "quote": "Make it feel obvious.",
+      "parent": "manager",
+      "portrait": "/portraits/ui-ux-designer.png"
+    },
+    "frontend-dev": {
+      "name": "Ren",
+      "title": "Frontend Developer",
+      "team": "eng",
+      "color": "#4aa3f0",
+      "bio": "Builds the interfaces people touch. Fast, tidy and pixel-aware.",
+      "quote": "Pixels in place.",
+      "parent": "manager",
+      "portrait": "/portraits/frontend-dev.png"
+    },
+    "backend-dev": {
+      "name": "Taro",
+      "title": "Backend Developer",
+      "team": "eng",
+      "color": "#4f8a5b",
+      "bio": "Builds the services and data behind the scenes. Reliable and unflashy.",
+      "quote": "It just works, quietly.",
+      "parent": "manager",
+      "portrait": "/portraits/backend-dev.png"
+    },
+    "mobile-dev": {
+      "name": "Aoi",
+      "title": "Mobile Developer",
+      "team": "eng",
+      "color": "#2f5fd0",
+      "bio": "Ships apps for phones that feel native. Cares about every gesture and frame.",
+      "quote": "Smooth on every screen.",
+      "parent": "manager",
+      "portrait": "/portraits/mobile-dev.png"
+    },
+    "devops-engineer": {
+      "name": "Gen",
+      "title": "DevOps Engineer",
+      "team": "eng",
+      "color": "#e0a030",
+      "bio": "Keeps builds, deploys and servers running. Fixes things before anyone notices.",
+      "quote": "Automate it. Then forget it.",
+      "parent": "manager",
+      "portrait": "/portraits/devops-engineer.png"
+    },
+    "qa-engineer": {
+      "name": "Nami",
+      "title": "QA Engineer",
+      "team": "eng",
+      "color": "#d6485a",
+      "bio": "Hunts for bugs and edge cases with relentless curiosity. Nothing ships until she is satisfied.",
+      "quote": "Found one. Found another.",
+      "parent": "manager",
+      "portrait": "/portraits/qa-engineer.png"
+    },
+    "code-reviewer": {
+      "name": "Sensei Kuro",
+      "title": "Code Reviewer",
+      "team": "eng",
+      "color": "#3a3f4a",
+      "bio": "A strict but fair senior reviewer who guards code quality. Feedback is blunt and always useful.",
+      "quote": "Again. Cleaner this time.",
+      "parent": "manager",
+      "portrait": "/portraits/code-reviewer.png"
+    },
+    "creative-director": {
+      "name": "Akira",
+      "title": "Creative Director",
+      "team": "creative",
+      "color": "#e0529c",
+      "bio": "Sets the visual and tonal direction for everything the studio makes. Keeps the work original and cohesive.",
+      "quote": "Bold, but never borrowed.",
+      "parent": "owner",
+      "portrait": "/portraits/creative-director.png"
+    },
+    "image-artist": {
+      "name": "Hikari",
+      "title": "Image Artist",
+      "team": "creative",
+      "color": "#f0c040",
+      "bio": "Turns briefs into illustrations with local image models. Iterates until the light is right.",
+      "quote": "Let me paint some light.",
+      "parent": "creative-director",
+      "portrait": "/portraits/image-artist.png"
+    },
+    "video-producer": {
+      "name": "Kenji",
+      "title": "Video Producer",
+      "team": "creative",
+      "color": "#c4452f",
+      "bio": "Turns stills and scripts into motion. Paces every cut for impact.",
+      "quote": "Roll camera.",
+      "parent": "creative-director",
+      "portrait": "/portraits/video-producer.png"
+    },
+    "copy-voice": {
+      "name": "Emi",
+      "title": "Copy & Voice",
+      "team": "creative",
+      "color": "#a56bd8",
+      "bio": "Writes the words and gives them a voice. Keeps the tone human and sharp.",
+      "quote": "Say it simply.",
+      "parent": "creative-director",
+      "portrait": "/portraits/copy-voice.png"
+    }
+  }
+}
