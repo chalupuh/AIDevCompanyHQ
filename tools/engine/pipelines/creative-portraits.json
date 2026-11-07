@@ -3,10 +3,10 @@
   "required": [],
   "defaults": {},
   "stages": [
-    { "id": "generate", "type": "script", "run": "node tools/creative/portraits.js --seeds 2" },
+    { "id": "generate", "type": "script", "run": "node \"{{soft}}/creative/portraits.js\" --seeds 2" },
     { "id": "pick", "type": "agent", "agent": "creative-director", "tier": "opus", "maxTurns": 60,
-      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash(node .studio/studio.js*)", "Bash(cp *)", "Bash(node tools/creative/portraits.js*)"],
-      "task": "Mode B review for the studio cast. For each agent in .studio/roster.json (except owner), LOOK at its candidates in .studio/portraits/candidates/<id>_*.png. Pick the better one (on-model for the role, clean face and hands, no text or artifacts, consistent style with the rest of the cast) and copy it to .studio/portraits/<id>.png with `cp`. If both are bad, regenerate that character with `node tools/creative/portraits.js --only <id> --seeds 4` and pick again. Write docs/creative/cast/review.md: a table of id | chosen file | why, plus any character that still needs work.",
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash(node .studio/studio.js*)", "Bash(cp *)", "Bash(node \"{{soft}}/creative/portraits.js\"*)"],
+      "task": "Mode B review for the studio cast. For each agent in .studio/roster.json (except owner), LOOK at its candidates in .studio/portraits/candidates/<id>_*.png. Pick the better one (on-model for the role, clean face and hands, no text or artifacts, consistent style with the rest of the cast) and copy it to .studio/portraits/<id>.png with `cp`. If both are bad, regenerate that character with `node \"{{soft}}/creative/portraits.js\" --only <id> --seeds 4` and pick again. Write docs/creative/cast/review.md: a table of id | chosen file | why, plus any character that still needs work.",
       "expect": ["docs/creative/cast/review.md", ".studio/portraits/manager.png", ".studio/portraits/qa-engineer.png", ".studio/portraits/code-reviewer.png"] },
     { "id": "owner-look", "type": "gate", "title": "Cast portraits are live in the Control Room. Keep them?", "show": ["docs/creative/cast/review.md"] }
   ]
