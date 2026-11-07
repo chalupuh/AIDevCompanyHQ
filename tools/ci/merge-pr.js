@@ -31,7 +31,11 @@ const refuse = (why) => { console.error(`REFUSED: ${why}. Ask the owner.`); proc
   for (;;) {
     let checks = [];
     try { checks = JSON.parse(gh('pr', 'checks', num, '--repo', repo, '--json', 'name,bucket')); } catch (e) { checks = JSON.parse((e.stdout || '[]').toString() || '[]'); }
-    if (!checks.length) refuse(`PR #${num} has no CI checks`);
+    if (!checks.length) {
+      // A brand-new PR may not have registered its checks yet.
+      if (Date.now() < deadline) { await sleep(10000); continue; }
+      refuse(`PR #${num} has no CI checks`);
+    }
     const failed = checks.filter((c) => ['fail', 'cancel'].includes(c.bucket));
     if (failed.length) refuse(`CI failed: ${failed.map((c) => c.name).join(', ')}`);
     const pending = checks.filter((c) => c.bucket === 'pending');
