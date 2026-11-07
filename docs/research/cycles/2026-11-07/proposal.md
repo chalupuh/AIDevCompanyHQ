@@ -163,7 +163,7 @@
 7. **Before any store launch:** trademark-check the chosen working name.
 
 ## Owner decision
-- [ ] family-chore-board: Approve / Park / Reject   Notes: (approving accepts the children's-data flag for the spec to resolve)
+- [x] family-chore-board: Approve   Notes: (approving accepts the children's-data flag for the spec to resolve) Owner 2026-11-07: first external app.
 - [ ] plant-watering-log: Approve / Park / Reject   Notes:
 - [ ] bill-calendar-glance: Approve / Park / Reject   Notes: (if approved, it absorbs subscription-trial-tracker)
 - [ ] tax-receipt-folder: Approve / Park / Reject   Notes: (consider pairing it with cycle-1 freelancer-time-log)
