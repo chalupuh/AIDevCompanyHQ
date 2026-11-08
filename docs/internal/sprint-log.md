@@ -174,3 +174,32 @@ Internal tasks for the Studio engine and tooling.
 - S2-B3: cursor via CSS: `.o-zoom-viewport{cursor:grab}` and `.dragging{cursor:grabbing}` (class toggled on the viewport); inline cursor styles removed.
 
 **Verified:** `npm --prefix .studio/app run build` OK; `npm --prefix .studio/app test` 92/92 pass. Drag behaviour has no unit test (no DOM test environment in the app); checked by code reading only.
+
+## Sprint 4j Task 1
+
+**Changed:**
+- `docs/runbook-bld.md` (new): 10-section BLD move-over (prerequisites, code, runtime state copy, machine.json bld-3090, models, calibration, network, always-on, cutover, rollback), each step with commands, expected output and a failure action.
+- `CLAUDE.md`: section "Local models on this PC" renamed "Hosts"; says BLD becomes the primary host after cutover and links the runbook.
+- `docs/local-llm-roadmap.md`: new "Moving to BLD" section linking the runbook.
+- `docs/internal/sprint-log.md`: this entry.
+
+**Verified:** Documentation only; no machine was contacted. Checked the section order against the task, and that the lane H/I specs (machine.json fields, StudioSupervisor task, firewall rule, token/pair behaviour) match the runbook. The Sprint 4 scripts are not yet merged in StudioControlRoom, so the runbook has a check (2.2) that stops if they are missing; the expected output shown comes from the lane specs, not from a live run. `tools/bld-preflight.ps1` is lane J task 2, so section 1 refers to it as planned.
+
+## Sprint 4j Task 2 — Preflight script for BLD
+
+**Changed:**
+- `tools/bld-preflight.ps1` (new): Read-only script covering every §1 prerequisite.
+  - **§1.1:** `nvidia-smi` on PATH → GPU name (RTX 3090), VRAM ≥ 24576 MiB, CUDA ≥ 12.
+  - **§1.2:** `node --version` → v24.x; `npm --version` present.
+  - **§1.3:** `git` on PATH; `C:\Program Files\Git\bin\bash.exe` exists; `git user.name` and `git user.email` set.
+  - **§1.4:** `gh` on PATH; `gh auth status` not "not logged in".
+  - **§1.5:** `claude` on PATH; `claude -p` responds with "ready".
+  - **§1.6:** `ollama` on PATH; `Invoke-RestMethod http://127.0.0.1:11434/api/version` returns a version property.
+  - **§1.7:** `C:` free space ≥ 150 GB.
+  - Prints `[PASS]`/`[FAIL]` per sub-check, exits non-zero on any failure, never installs or changes anything.
+  - GPU CSV parsed by `LastIndexOf` to handle GPU names with spaces.
+  - GPU sub-checks (name, VRAM, CUDA) only run if `nvidia-smi` itself passes, so a missing GPU doesn't cascade false failures.
+
+**Verification:** PowerShell sandbox blocked execution here on the 5090, so no live run was possible. The script was reviewed against each runbook §1.x command to ensure 1:1 coverage: every manual check has an automated counterpart, every expected value is compared, and the summary exit code matches "proceed / stop" semantics. Syntax verified by reading the file back and confirming no `$?` inside scriptblocks (the original `$?` bug was fixed in the nvidia-smi PATH check by using `$null -ne $cmd`; the remaining `$?` uses in node/npm/git/gh/claude/ollama checks are safe because the prior line either sets `$?` directly or the scriptblock contains only one statement).
+
+**Note:** `docs/runbook-bld.md` §1 already references this script as planned — no runbook edit needed.
