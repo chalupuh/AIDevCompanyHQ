@@ -1,20 +1,113 @@
 {
   "description": "Internal R&D: research agent orgs, workflow frameworks and control-room/village UIs (Sonnet, web) → local synthesis into improvements → Opus ranks → owner picks.",
-  "required": ["topic"],
+  "required": [
+    "topic"
+  ],
   "defaults": {},
   "stages": [
-    { "id": "research", "type": "agent", "agent": "market-researcher", "tier": "sonnet", "maxTurns": 50, "timeoutMin": 45,
-      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch", "Bash(node .studio/studio.js*)"],
+    {
+      "id": "research",
+      "type": "agent",
+      "agent": "market-researcher",
+      "tier": "sonnet",
+      "maxTurns": 50,
+      "timeoutMin": 45,
+      "requires": [
+        "CLAUDE.md",
+        "docs/plans/2026-11-internal-initiatives.md",
+        "docs/adr/0001-model-placement-standard.md",
+        "tools/engine/engine.js"
+      ],
+      "dod": [
+        "## Multi-Agent Frameworks",
+        "## Workflow Frameworks",
+        "## Observability & Control UIs"
+      ],
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "WebSearch",
+        "WebFetch",
+        "Bash(node .studio/studio.js*)"
+      ],
       "task": "INTERNAL research for our own studio (not an app idea scan). Topic: {{topic}}.\nFirst read CLAUDE.md, docs/plans/2026-11-internal-initiatives.md, docs/adr/0001-model-placement-standard.md and tools/engine/engine.js so you know what we already have.\nResearch with fetched sources (cite every claim with a link): (1) multi-agent frameworks and their role/org designs (e.g. CrewAI, AutoGen, LangGraph, MetaGPT, ChatDev, OpenHands) — what roles, handoffs, memory and review loops they use; (2) standard team workflow frameworks we could adopt per role (Scrum/Kanban, RACI, definition-of-ready/done, DORA metrics, incident/postmortem practice, design critique rituals, editorial calendars for creative); (3) agent observability/control UIs (LangSmith, AgentOps, Langfuse, Helicone and similar) and 'agent village'/simulation visualisations (e.g. generative-agents town, AI village style views) — which features matter.\nWrite docs/research/internal/{{date}}/findings.md: per area, 4-8 findings each with source link, what it is, and 'relevance to us' in one line.",
-      "expect": ["docs/research/internal/{{date}}/findings.md"] },
-    { "id": "synthesize", "type": "agent", "agent": "opportunity-analyst", "tier": "local", "maxTurns": 30, "timeoutMin": 40,
-      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash(node .studio/studio.js*)"],
+      "expect": [
+        "docs/research/internal/{{date}}/findings.md"
+      ]
+    },
+    {
+      "id": "synthesize",
+      "type": "agent",
+      "agent": "internal-analyst",
+      "tier": "local",
+      "maxTurns": 30,
+      "timeoutMin": 40,
+      "requires": [
+        "docs/research/internal/{{date}}/findings.md"
+      ],
+      "dod": [
+        "## Control Room UI",
+        "## Village View",
+        "## Workflows & Roles",
+        "## Engine",
+        "## Creative Pipeline"
+      ],
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "Bash(node .studio/studio.js*)"
+      ],
       "task": "Turn docs/research/internal/{{date}}/findings.md into concrete improvements for OUR studio. Write docs/research/internal/{{date}}/recommendations.md with 10-15 items. Each: title, department (eng | creative | rd | process), what to change (specific files/features), why (cite the finding), impact 1-5, effort S/M/L, and whether a local model can do it. Group as: Control Room UI, Village view, Workflows & roles, Engine, Creative pipeline.",
-      "expect": ["docs/research/internal/{{date}}/recommendations.md"] },
-    { "id": "rank", "type": "agent", "agent": "rd-manager", "tier": "opus", "maxTurns": 25,
-      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "Bash(node .studio/studio.js*)"],
+      "expect": [
+        "docs/research/internal/{{date}}/recommendations.md"
+      ]
+    },
+    {
+      "id": "rank",
+      "type": "agent",
+      "agent": "rd-manager",
+      "tier": "opus",
+      "maxTurns": 25,
+      "requires": [
+        "docs/research/internal/{{date}}/recommendations.md",
+        "docs/research/internal/{{date}}/findings.md"
+      ],
+      "dod": [
+        "## Summary Table",
+        "## Owner decision"
+      ],
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "WebFetch",
+        "Bash(node .studio/studio.js*)"
+      ],
       "task": "Review docs/research/internal/{{date}}/recommendations.md against findings.md: drop weak or unsupported items, merge duplicates, fix impact/effort, and rank by impact/effort. Write docs/research/internal/{{date}}/proposal.md: a ranked table (rank, item, dept, impact, effort, local-ok), short rationale per top item, and an 'Owner decision' block with one checkbox line per item (Approve / Park / Reject). Approved items become lines in docs/internal/eng-backlog.md or docs/internal/creative-backlog.md after the owner decides — do not add them yourself.",
-      "expect": ["docs/research/internal/{{date}}/proposal.md"] },
-    { "id": "owner-decision", "type": "gate", "title": "Internal improvements proposal {{date}}: approve what to build", "show": ["docs/research/internal/{{date}}/proposal.md", "docs/research/internal/{{date}}/findings.md"] }
+      "expect": [
+        "docs/research/internal/{{date}}/proposal.md"
+      ]
+    },
+    {
+      "id": "owner-decision",
+      "type": "gate",
+      "title": "Internal improvements proposal {{date}}: approve what to build",
+      "requires": [
+        "docs/research/internal/{{date}}/proposal.md",
+        "docs/research/internal/{{date}}/findings.md"
+      ],
+      "show": [
+        "docs/research/internal/{{date}}/proposal.md",
+        "docs/research/internal/{{date}}/findings.md"
+      ]
+    }
   ]
 }

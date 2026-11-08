@@ -13,6 +13,15 @@
       "agent": "rd-manager",
       "tier": "local",
       "maxTurns": 10,
+      "requires": [
+        "docs/research/brief-template.md",
+        "docs/research/backlog.md"
+      ],
+      "dod": [
+        "## Theme",
+        "## Constraints",
+        "## Targets"
+      ],
       "task": "Fill docs/research/brief-template.md into docs/research/cycles/{{date}}/brief.md. Theme: {{theme}}. Read docs/research/backlog.md so covered ideas are skipped.",
       "expect": [
         "docs/research/cycles/{{date}}/brief.md"
@@ -25,6 +34,15 @@
       "tier": "sonnet",
       "maxTurns": 40,
       "timeoutMin": 45,
+      "requires": [
+        "docs/research/cycles/{{date}}/brief.md"
+      ],
+      "dod": [
+        "## Hot",
+        "## Warm",
+        "## Cold",
+        "ANALYZE:"
+      ],
       "task": "Run the scan for the R&D cycle in docs/research/cycles/{{date}}/brief.md, following your role file and docs/research/METHODOLOGY.md. Write docs/research/cycles/{{date}}/scan.md. End scan.md with a line 'ANALYZE: slug1, slug2, ...' listing the ~6 ideas for analysis.",
       "expect": [
         "docs/research/cycles/{{date}}/scan.md"
@@ -49,6 +67,12 @@
       "tier": "local",
       "maxTurns": 40,
       "timeoutMin": 45,
+      "requires": [
+        "docs/research/cycles/{{date}}/scan.md"
+      ],
+      "dod": [
+        "docs/research/ideas/<slug>.md per idea, each with headings: ## Pitch, ## Target User, ## Evidence, ## Competitors & Differentiation, ## MVP Features, ## Score Breakdown, ## Risks"
+      ],
       "task": "Analyze the FIRST HALF of the ideas on the 'ANALYZE:' line at the end of docs/research/cycles/{{date}}/scan.md. Write one docs/research/ideas/<slug>.md per idea, per your role file.",
       "expect": [
         "docs/research/cycles/{{date}}/scan.md"
@@ -71,6 +95,12 @@
       "tier": "local",
       "maxTurns": 40,
       "timeoutMin": 45,
+      "requires": [
+        "docs/research/cycles/{{date}}/scan.md"
+      ],
+      "dod": [
+        "docs/research/ideas/<slug>.md per idea, each with headings: ## Pitch, ## Target User, ## Evidence, ## Competitors & Differentiation, ## MVP Features, ## Score Breakdown, ## Risks"
+      ],
       "task": "Analyze the SECOND HALF of the ideas on the 'ANALYZE:' line at the end of docs/research/cycles/{{date}}/scan.md. Write one docs/research/ideas/<slug>.md per idea, per your role file.",
       "expect": [
         "docs/research/cycles/{{date}}/scan.md"
@@ -92,6 +122,15 @@
       "agent": "rd-manager",
       "tier": "opus",
       "maxTurns": 30,
+      "requires": [
+        "docs/research/cycles/{{date}}/scan.md",
+        "docs/research/ideas/*.md"
+      ],
+      "dod": [
+        "## Summary Table",
+        "## R&D Manager's Recommendation",
+        "## Owner decision"
+      ],
       "task": "Mode B for the cycle in docs/research/cycles/{{date}}/: calibrate, rank, write proposal.md with the Owner decision block, update docs/research/backlog.md.",
       "expect": [
         "docs/research/cycles/{{date}}/proposal.md"
@@ -111,6 +150,9 @@
       "id": "owner-decision",
       "type": "gate",
       "title": "R&D proposal {{date}}: pick what to build",
+      "requires": [
+        "docs/research/cycles/{{date}}/proposal.md"
+      ],
       "show": [
         "docs/research/cycles/{{date}}/proposal.md"
       ]

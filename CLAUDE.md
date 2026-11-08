@@ -30,9 +30,9 @@ Subagents can't start other subagents, so the main session runs **both** teams' 
 - `.studio/studio.js` and `tools/engine/engine.js` in this repo are **forwarding shims** to that checkout, so every command below keeps working. Set `STUDIO_SOFT` if the software lives elsewhere.
 - **Control Room / engine changes are made in StudioControlRoom** (internal-build runs with `workdir={{soft}}`). Org and docs changes are made here. Both repos: branch, PR, required CI, then squash merge.
 
-## Workflow Engine: default way to run work (ADR 0001)
+## Workflow Engine: default way to run work (ADR 0001, ADR 0003)
 
-Pipelines run through `tools/engine/engine.js`, not through this chat session. The engine runs each stage as a headless Claude Code run using the role's agent file: **local models** (`qwen3.6:27b` via Ollama) for worker stages and **Claude Opus** only for gate reviews (design, milestone code review, R&D calibration). Success is decided by file and test checks, never by the model's own claim. Failed stages climb the ladder (local → local retry → Sonnet → **blocked** → owner).
+Pipelines run through `tools/engine/engine.js`, not through this chat session. The engine runs each stage as a headless Claude Code run using the role's agent file: **local models** (`qwen3.6:27b` via Ollama) for worker stages and **Claude Opus** only for gate reviews (design, milestone code review, R&D calibration). Success is decided by file and test checks, never by the model's own claim. Failed stages climb the ladder (local → local retry → Sonnet → **blocked** → owner). Pipelines are static JSON and managers only review at gates, never routing work dynamically: see [ADR 0003](docs/adr/0003-static-pipelines-managers-review.md).
 
 ```
 node tools/engine/engine.js pipelines                         # rd-cycle, lite-build, smoke

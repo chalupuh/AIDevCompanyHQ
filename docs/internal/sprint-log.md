@@ -174,3 +174,96 @@ Internal tasks for the Studio engine and tooling.
 - S2-B3: cursor via CSS: `.o-zoom-viewport{cursor:grab}` and `.dragging{cursor:grabbing}` (class toggled on the viewport); inline cursor styles removed.
 
 **Verified:** `npm --prefix .studio/app run build` OK; `npm --prefix .studio/app test` 92/92 pass. Drag behaviour has no unit test (no DOM test environment in the app); checked by code reading only.
+
+## Sprint 2d Task 1 — Fixed per-asset review format for creative-director Mode B
+
+**Changed (.claude/agents/creative-director.md):**
+- **Mode B: Review** section now specifies a fixed per-asset format block (in a fenced code block) that must be used for every asset reviewed. The format requires five fields per asset:
+  - **Verdict:** APPROVE / REDO
+  - **What works:** (specific strengths aligned to the brief)
+  - **What doesn't:** (specific visible issues — colour, composition, artifacts, dimensions, legibility, originality)
+  - **Redo instruction:** (exact prompt change or parameter tweak; omit if APPROVE)
+  - **Originality check:** (confirm no imitation of another brand's logo/mascot/trade dress; no living-artist name or "style of <studio>"; no real-person likeness)
+
+**Changed (tools/engine/pipelines/creative-portraits.json):**
+- **'pick' task text:** now explicitly requires the fixed per-asset format when writing the review.md.
+- **Copy instruction:** replaced `cp` with `node -e "require('fs').copyFileSync('src','dst')"` — a Node.js one-liner that avoids shell compatibility issues.
+- **allowedTools:** replaced `Bash(cp *)` with `Bash(node -e*)` to permit the new copy command while keeping the tool scope narrow.
+
+**Verification:**
+- creative-director.md: grepped for `Verdict.*APPROVE.*REDO` — found on line 18 inside the fenced format block.
+- creative-portraits.json: parsed with `JSON.parse()` — valid JSON. Confirmed `allowedTools` contains `Bash(node -e*)` (not `cp`), task text contains `copyFileSync` and `per-asset format`.
+
+## Sprint 2d Task 2 — ADR 0003: Static pipelines; managers review at gates only
+
+**Changed:**
+- **`docs/adr/0003-static-pipelines-managers-review.md`** (created): Documents the decision that pipelines are static JSON run by the engine; manager roles (`rd-manager`, `creative-director`, `code-reviewer`) only review at gates and never route work dynamically. Covers why (cost predictability, reproducibility, consistency with ADR 0001's tier separation), consequences (positive and trade-offs), and implementation notes mapping the existing pipeline JSON files to the pattern.
+- **`CLAUDE.md`** (line 33): Added `(ADR 0003)` reference to the Workflow Engine section heading alongside the existing ADR 0001 link.
+
+**Verification:**
+- ADR follows the same structure as ADR 0001 and ADR 0002: Status/Date/Owner header, Context, Decision (with table), Consequences (positive, trade-offs, implementation notes).
+- Cross-references ADR 0001 (model placement tiers) and ADR 0002 (repos).
+- Concrete examples drawn from actual pipeline files (`rd-cycle.json`, `lite-build.json`, `smoke.json`).
+- CLAUDE.md heading updated and grep-confirmed at line 33.
+
+## Sprint 2d Task 4 — Stage contracts: `requires` (inputs) and `dod` (output headings) on pipeline stages
+
+**Problem:** Pipeline stage definitions had `expect` (output file paths) and `check` (validation commands) but no declarative list of which inputs each stage reads, and no Definition of Done for the required structure of outputs. The engine and the reading agent had to infer contracts from the `task` text alone.
+
+**Changed (tools/engine/pipelines/rd-cycle.json):**
+- **brief**: `requires` — `brief-template.md`, `backlog.md`; `dod` — `## Theme`, `## Constraints`, `## Targets`
+- **scan**: `requires` — `brief.md`; `dod` — `## Hot`, `## Warm`, `## Cold`, `ANALYZE:`
+- **analyze-a / analyze-b**: `requires` — `scan.md`; `dod` — idea briefs each containing `## Pitch`, `## Target User`, `## Evidence`, `## Competitors & Differentiation`, `## MVP Features`, `## Score Breakdown`, `## Risks`
+- **calibrate**: `requires` — `scan.md`, `ideas/*.md`; `dod` — `## Summary Table`, `## R&D Manager's Recommendation`, `## Owner decision`
+- **owner-decision** (gate): `requires` — `proposal.md`
+
+**Changed (tools/engine/pipelines/internal-research.json):**
+- **research**: `requires` — `CLAUDE.md`, `internal-initiatives.md`, `adr/0001`, `engine.js`; `dod` — `## Multi-Agent Frameworks`, `## Workflow Frameworks`, `## Observability & Control UIs`
+- **synthesize**: `requires` — `findings.md`; `dod` — `## Control Room UI`, `## Village View`, `## Workflows & Roles`, `## Engine`, `## Creative Pipeline`
+- **rank**: `requires` — `recommendations.md`, `findings.md`; `dod` — `## Summary Table`, `## Owner decision`
+- **owner-decision** (gate): `requires` — `proposal.md`, `findings.md`
+
+**Verification:**
+- Both JSON files parsed with `JSON.parse()` — valid.
+- Every `requires` entry maps to a file the stage's `task` text references or a predecessor stage's `expect` output.
+- Every `dod` heading is called out in either the `task` text or METHODOLOGY.md §5 (proposal format).
+## Sprint 2d Task 1 rework (round 1) - creative-director review findings
+
+**Findings fixed:**
+- **S2** (chosen-file mapping lost from pick task): Added Chosen file field to the fixed per-asset format in creative-director.md Mode B. Updated creative-portraits.json pick task text to require it.
+- **Nit** (no newline at end of creative-director.md): Added trailing newline.
+
+**Findings deferred:**
+- **S1** (Bash node -e star unrestricted code): The review recommends a pick subcommand in portraits.js in StudioControlRoom repo. Filed as a StudioControlRoom follow-up; not in-scope for this HQ-only lane.
+
+**Files changed:** .claude/agents/creative-director.md, tools/engine/pipelines/creative-portraits.json.
+
+**Verification:** JSON parsed successfully; task text confirmed to contain all six format fields plus copyFileSync instruction. Agent file confirmed to have Chosen file line inside the fenced format block and trailing newline.
+
+## Sprint 2d Task 2 (fix round)
+
+**Changed:** `CLAUDE.md` now has a real Markdown link to `docs/adr/0003-static-pipelines-managers-review.md` in the Workflow Engine section. In the ADR, removed two inaccurate references (a `foreach` stage type and a nonexistent `tools/engine/selftest.js`).
+
+**Verified:** grep confirms the link in CLAUDE.md and no remaining `foreach` in the ADR. I checked the stage ids and tiers against `rd-cycle.json`.
+
+## Sprint 2d Task 3 — Enrich internal-analyst agent definition for internal synthesis
+
+**Problem:** The existing `.claude/agents/internal-analyst.md` was sparse (~12 lines of body). On 2026-11-07 the local model confused internal studio synthesis with app-idea market scoring because the agent's scope boundaries were not explicit enough.
+
+**Changed (.claude/agents/internal-analyst.md):**
+- Enriched from ~12 to ~36 lines of body text, matching the style of `opportunity-analyst.md` and `market-researcher.md`.
+- **Explicit anti-goal:** "**You do NOT do:** app idea scoring, market analysis, MVP scoping, monetization, or any customer-facing product work. That is `opportunity-analyst`."
+- **Structured inputs:** lists `findings.md` and specific codebase paths (`CLAUDE.md`, pipeline JSONs, agent definitions, engine code, Control Room app).
+- **Output format:** each recommendation item requires Title, Department, What to change, Why, Impact, Effort, Local-ok.
+- **Group headings:** Control Room UI, Village View, Workflows & Roles, Engine, Creative Pipeline.
+- **Rules:** references ADR 0001 and ADR 0003, sprint-feasible constraint, "**No app ideas**" rule.
+- **Progress reporting:** `studio.js log internal-analyst` at milestones.
+- Frontmatter preserved: `name: internal-analyst`, `tools: Read, Write, Edit, Glob, Grep, Bash`, `model: sonnet`.
+
+**Changed (tools/engine/pipelines/internal-research.json):**
+- No change needed — synthesize stage already has `"agent": "internal-analyst"` with `"tier": "local"`. Verified.
+
+**Verification:**
+- Agent file: frontmatter parsed correctly (name, description, tools, model: sonnet). Body contains explicit NOT scope, ADR references, and "No app ideas" rule.
+- Pipeline: `JSON.parse()` valid, synthesize stage agent = `internal-analyst`, tier = `local`.
+- Style consistency: compared against `opportunity-analyst.md` and `market-researcher.md` — same structure (frontmatter, role intro, anti-goals, inputs, output format, rules, progress reporting).
