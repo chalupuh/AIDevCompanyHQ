@@ -189,17 +189,37 @@ Internal tasks for the Studio engine and tooling.
 
 **Changed:**
 - `tools/bld-preflight.ps1` (new): Read-only script covering every §1 prerequisite.
-  - **§1.1:** `nvidia-smi` on PATH → GPU name (RTX 3090), VRAM ≥ 24576 MiB, CUDA ≥ 12.
+  - **§1.1:** `nvidia-smi` on PATH → GPU name (WARN if not RTX 3090), VRAM ≥ 24576 MiB, CUDA ≥ 12.
   - **§1.2:** `node --version` → v24.x; `npm --version` present.
   - **§1.3:** `git` on PATH; `C:\Program Files\Git\bin\bash.exe` exists; `git user.name` and `git user.email` set.
-  - **§1.4:** `gh` on PATH; `gh auth status` not "not logged in".
-  - **§1.5:** `claude` on PATH; `claude -p` responds with "ready".
+  - **§1.4:** `gh` on PATH; `gh auth status` exit code is 0.
+  - **§1.5:** `claude` on PATH; `claude --version` returns output (no live model call).
   - **§1.6:** `ollama` on PATH; `Invoke-RestMethod http://127.0.0.1:11434/api/version` returns a version property.
   - **§1.7:** `C:` free space ≥ 150 GB.
   - Prints `[PASS]`/`[FAIL]` per sub-check, exits non-zero on any failure, never installs or changes anything.
   - GPU CSV parsed by `LastIndexOf` to handle GPU names with spaces.
   - GPU sub-checks (name, VRAM, CUDA) only run if `nvidia-smi` itself passes, so a missing GPU doesn't cascade false failures.
 
-**Verification:** PowerShell sandbox blocked execution here on the 5090, so no live run was possible. The script was reviewed against each runbook §1.x command to ensure 1:1 coverage: every manual check has an automated counterpart, every expected value is compared, and the summary exit code matches "proceed / stop" semantics. Syntax verified by reading the file back and confirming no `$?` inside scriptblocks (the original `$?` bug was fixed in the nvidia-smi PATH check by using `$null -ne $cmd`; the remaining `$?` uses in node/npm/git/gh/claude/ollama checks are safe because the prior line either sets `$?` directly or the scriptblock contains only one statement).
+**QA round 1 fixes:**
+- B1: runbook §1 plainly says to run `powershell -ExecutionPolicy Bypass -File tools\bld-preflight.ps1`.
+- B2: the Claude check uses `claude --version` only; no live model call.
+- B3: `Check` and `Warn` return `$null` and callers assign `$null = ...`, so no stray True/False output.
+- B4: the RTX 3090 check is a WARN (counted as a notice, exit code unaffected). Also fixed an inverted condition: the WARN scriptblock used `-notmatch`, which would have warned on the 3090 and stayed silent on other GPUs. It now uses `-match`.
+- B5: tool detection uses `$null -ne (Get-Command ...)`.
 
-**Note:** `docs/runbook-bld.md` §1 already references this script as planned — no runbook edit needed.
+**Verification:** NOT run live. The sandbox denies `powershell`/`pwsh`/batch execution for this agent. I checked the file by reading it against each fix above. Someone should run `powershell -ExecutionPolicy Bypass -File tools\bld-preflight.ps1` on a host and confirm the output and exit code before this task counts as verified.
+
+## Sprint 4j Task 2 rework round 2
+
+**Problem (R2-A):** Non-ASCII characters in the script body — `§` (U+00A7) in 8 section labels, `…` (U+2026) in synopsis comment. PS 5.1 auto-detects source encoding; UTF-8 without BOM fails with `Running bld-preflight.ps1 as a Windows Cmdlet`.
+
+**Problem (R2-B):** `$ErrorActionPreference = 'Continue'` inside the gh-auth check (line 160). Analysis: scriptblocks are child scopes — the parent `$ErrorActionPreference` is NOT mutated. The round-1 fix was already safe. **Verdict: no real bug.**
+
+**Changed (`tools/bld-preflight.ps1`):**
+- Full rewrite to plain ASCII (0 non-ASCII characters confirmed by `node` byte scan).
+- Section labels were already `1.1`, `1.2`, etc. (ASCII). The non-ASCII `§` was in the script comments from an earlier round and was removed. The non-ASCII `§` in the *sprint log* text is not a problem (Markdown supports Unicode).
+- Confirmed: `$ErrorActionPreference` scoping in gh-auth check is correct — no leak.
+
+**Verification:** ASCII scan pass (0 non-ASCII bytes). Scoping review pass (child scope semantics). Live execution blocked by sandbox. A human must run the script on BLD and confirm PASS + exit 0.
+
+**QA report:** `docs/internal/qa/s4j-task-2-round2.md`
