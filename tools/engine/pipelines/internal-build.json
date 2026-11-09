@@ -47,7 +47,7 @@
           "type": "agent",
           "agent": "qa-engineer",
           "tier": "local",
-          "maxTurns": 30,
+          "maxTurns": 45,
           "allowedTools": [
             "Read",
             "Write",
@@ -77,7 +77,7 @@
       "type": "agent",
       "agent": "code-reviewer",
       "tier": "opus",
-      "maxTurns": 30,
+      "maxTurns": 60,
       "allowedTools": [
         "Read",
         "Write",

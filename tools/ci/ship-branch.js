@@ -24,7 +24,17 @@ if (!staged && ahead === '0') fail('nothing to ship');
 // Never ship personal emails or obvious secrets.
 const diff = staged ? run('git', ['diff', '--cached'], workdir) : '';
 if (/newhart|@gmail\.com|sk-ant-|ghp_[A-Za-z0-9]{20}|BEGIN [A-Z ]*PRIVATE KEY/.test(diff)) fail('diff contains an email or secret-like string');
+if (/\{\{\w+\}\}/.test(title)) fail(`title has an unfilled variable: ${title}`);
 if (staged) run('git', ['commit', '-q', '-m', `${title}\n\nShipped by the studio engine after QA and Opus review APPROVE.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`], workdir);
+// Lanes run in parallel, so main often moved on while this one was in review. Bring main in first: a conflicted
+// PR gets no CI and merge-pr.js refuses it. A real conflict stops here for a human to resolve.
+run('git', ['fetch', '-q', 'origin', 'main'], workdir);
+try { run('git', ['merge', '--no-edit', '-q', 'origin/main'], workdir); }
+catch {
+  let files = ''; try { files = run('git', ['diff', '--name-only', '--diff-filter=U'], workdir); } catch {}
+  try { run('git', ['merge', '--abort'], workdir); } catch {}
+  fail(`branch ${branch} conflicts with main in: ${files.split('\n').join(', ') || '(unknown)'}. Merge origin/main by hand, re-run the tests, then resume.`);
+}
 run('git', ['push', '-q', '-u', 'origin', branch], workdir);
 
 let url;
