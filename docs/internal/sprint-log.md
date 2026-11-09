@@ -223,3 +223,22 @@ Internal tasks for the Studio engine and tooling.
 **Verification:** ASCII scan pass (0 non-ASCII bytes). Scoping review pass (child scope semantics). Live execution blocked by sandbox. A human must run the script on BLD and confirm PASS + exit 0.
 
 **QA report:** `docs/internal/qa/s4j-task-2-round2.md`
+
+## Sprint 4j Task 2 rework round 2
+
+**Problem:** Code review round 2 (`docs/internal/review-sprint4j-round2.md`) found one blocker (B1 — already fixed round 1), four should-fix items (S1-S4), and seven nits (N1-N7) plus process item S5.
+
+**Changed (`docs/runbook-bld.md`):**
+- S1: §6.2 Ollama restart — added `$env:OLLAMA_NUM_PARALLEL = '<value>'` after `SetEnvironmentVariable` so current PowerShell session picks up the new value; redirected `ollama serve` stderr to `$env:TEMP\ollama-serve.log` instead of reading stale `server.log`.
+- S2: §3.3 method A — added `$bld = 'goldg@192.168.1.117'` to method A block so share-delete ssh command works; added Expected line for share delete; added note that same cleanup applies in §9.4.
+- N1: Renumbered §9.3 (Stop 5090 background work) and §9.4 (Final state copy) so they appear in correct numerical order.
+- N6: §3.3 cleanup — replaced "no runs remaining" with `(Get-ChildItem runs -ErrorAction SilentlyContinue | Measure-Object).Count` returning `0`.
+
+**Changed (`tools/bld-preflight.ps1`):**
+- N2: CUDA fallback mapping corrected — `527+ -> 12`, `452+ -> 11` (was `550+ -> 12`, `516+ -> 11`); removed duplicate branches; added `(estimated from driver)` label when fallback is used.
+- N3: Replaced non-ASCII characters (`§` -> `section`, `→` -> `->`) for PS 5.1 compatibility.
+- N7: Renamed WARN from "Git Bash at default path" to "Git Bash found"; prints discovered path so operator can copy into `machine.json.gitBash`.
+
+**Verification:** ASCII scan confirms 0 non-ASCII bytes in preflight.ps1. Live execution blocked by sandbox.
+
+**QA report:** `docs/internal/qa/s4j-task-2-round2.md` (already existed from QA round).
