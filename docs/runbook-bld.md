@@ -26,6 +26,8 @@ From the HQ directory, run:
 powershell -ExecutionPolicy Bypass -File tools\bld-preflight.ps1
 ```
 
+A convenience wrapper also exists: `tools\bld-run-preflight.bat` handles the PowerShell flags automatically (just run it from any CMD/terminal).
+
 It prints PASS/FAIL for every prerequisite plus GPU name/VRAM and exits non-zero on any failure. Every check must pass before section 2. Use the manual commands below only for sections it reports as FAIL.
 
 ### 1.1 NVIDIA driver and CUDA
@@ -85,12 +87,13 @@ If it fails: `winget install GitHub.cli`, then the **owner** runs `gh auth login
 
 ```powershell
 claude --version
-claude -p "Reply with the single word: ready" --output-format text
 ```
 
-Expected: a version number, then `ready`.
+Expected: a version number (e.g. `0.x.x`).
 
-If it fails: install Claude Code (`npm install -g @anthropic-ai/claude-code`, or the current installer from the Claude Code docs), then **the owner** runs `claude` once on the BLD console and completes the login. An agent cannot do this login. If the second command asks you to log in, the owner must finish the login first.
+If it fails: install Claude Code (`npm install -g @anthropic-ai/claude-code`, or the current installer from the Claude Code docs), then **the owner** runs `claude` once on the BLD console and completes the login. An agent cannot do this login. After install, if `claude --version` reports a version but subsequent runs prompt for login, the owner must finish the login first.
+
+> **Note:** The preflight script (§1) checks `claude --version` only — it does not make a live model call. If you want to confirm the login works interactively, run `claude -p "Reply with the single word: ready" --output-format text` after the preflight passes.
 
 ### 1.6 Ollama
 
@@ -205,8 +208,9 @@ Copy:
 |---|---|
 | Engine runs | `runs\` |
 | Checkpoints | `checkpoints\` |
-| Roster | `roster.json` |
-| Portraits | `portraits\` |
+| Pause switch | `control.json` |
+| Roster | `roster.json` (only if uncommitted changes exist — tracked in git) |
+| Portraits | `portraits\` (only if uncommitted changes exist — tracked in git) |
 | Events log | `events.jsonl` (and any rotated `events*.jsonl`) |
 
 Do **not** copy (they are per machine or secret):
@@ -236,12 +240,17 @@ Then on the 5090:
 net use \\192.168.1.117\StudioState /user:goldg
 $src = 'C:\Users\goldg\AIDevCompanyHQ\.studio'
 $dst = '\\192.168.1.117\StudioState'
+$bld = 'goldg@192.168.1.117'
 robocopy "$src\runs"        "$dst\runs"        /E /COPY:DAT /R:2 /W:2 /NP /LOG+:$env:TEMP\bld-copy.log
 robocopy "$src\checkpoints" "$dst\checkpoints" /E /COPY:DAT /R:2 /W:2 /NP /LOG+:$env:TEMP\bld-copy.log
 robocopy "$src\portraits"   "$dst\portraits"   /E /COPY:DAT /R:2 /W:2 /NP /LOG+:$env:TEMP\bld-copy.log
-robocopy $src $dst roster.json events.jsonl /COPY:DAT /R:2 /W:2 /NP /LOG+:$env:TEMP\bld-copy.log
+robocopy $src $dst roster.json control.json events.jsonl /COPY:DAT /R:2 /W:2 /NP /LOG+:$env:TEMP\bld-copy.log
 net use \\192.168.1.117\StudioState /delete
+# Clean up the SMB share on BLD (run on BLD or via ssh):
+ssh $bld "powershell -Command net share StudioState /delete"
 ```
+
+Expected: each robocopy ends with `Failed : 0`, share delete prints `"StudioState was deleted successfully."`. The same share cleanup applies in §9.4 (final copy).
 
 **Method B: SSH (no share).**
 
@@ -249,9 +258,9 @@ net use \\192.168.1.117\StudioState /delete
 # [5090]
 $src = 'C:\Users\goldg\AIDevCompanyHQ\.studio'
 $bld = 'goldg@192.168.1.117'
-ssh $bld "powershell -Command New-Item -ItemType Directory -Force C:\Users\goldg\AIDevCompanyHQ\.studio | Out-Null"
+ssh $bld "powershell -Command New-Item -ItemType Directory -Force C:\Users\goldg\AIDevCompanyHQ\.studio"
 scp -r "$src\runs" "$src\checkpoints" "$src\portraits" "${bld}:C:/Users/goldg/AIDevCompanyHQ/.studio/"
-scp "$src\roster.json" "$src\events.jsonl" "${bld}:C:/Users/goldg/AIDevCompanyHQ/.studio/"
+scp "$src\roster.json" "$src\control.json" "$src\events.jsonl" "${bld}:C:/Users/goldg/AIDevCompanyHQ/.studio/"
 ```
 
 Expected (method A): each robocopy ends with a summary table and `Failed : 0`, and the exit code is 0–7 (robocopy codes 0–7 are success; 8 or more is failure). Method B: scp prints each file with 100%.
@@ -271,6 +280,18 @@ Test-Path machine.json, auth.json, server.pid, locks
 Expected: the run file count equals the 5090's count (`(Get-ChildItem runs -Recurse -File | Measure-Object).Count` on the 5090); `Test-Path roster.json, events.jsonl` prints `True True`; the last line prints `False False False False`.
 
 If it fails: counts differ → rerun the copy. A `True` for `machine.json`, `auth.json`, `server.pid` or `locks` means it was copied by mistake: delete it (`Remove-Item -Recurse -Force <name>`), then continue.
+
+**Clean up trial state on BLD and pause the switch.** After the trial copy, BLD holds run records that could resume on both hosts. Delete them and set the switch to Paused so the supervisor (§8) does not pick them up prematurely:
+
+```powershell
+# [BLD]
+cd C:\Users\goldg\AIDevCompanyHQ\.studio
+Remove-Item -Recurse -Force runs\ checkpoints\ -ErrorAction SilentlyContinue
+node ..\.studio\studio.js pause
+node ..\.studio\studio.js status
+```
+
+Expected: `status` shows the switch as **Paused**, and `(Get-ChildItem runs -ErrorAction SilentlyContinue | Measure-Object).Count` returns `0`.
 
 ### 3.5 Resume the 5090 for now [5090]
 
@@ -294,13 +315,14 @@ cd C:\Users\goldg\StudioControlRoom
 Get-Content studio\machine.example.json
 ```
 
-Expected: a JSON object with two profiles, `goldg-5090` (32 GB, `numParallel` 4, `llmSlots` 3) and `bld-3090` (24 GB, `numParallel` 2, `llmSlots` 2, `contextLength` 32768).
+Expected: a JSON object with a `profiles` object containing `goldg-5090` (32 GB, `numParallel` 4, `llmSlots` 3) and `bld-3090` (24 GB, `numParallel` 2, `llmSlots` 2, `contextLength` 32768).
 
-Write the BLD profile (adjust `gitBash` if you recorded a different path in 1.3). This writes the profile's contents as the file itself, not the wrapper with two profiles:
+Write the BLD profile (adjust `gitBash` if you recorded a different path in 1.3). The profile sits under `profiles` in the example file, so we extract `$m.profiles.'bld-3090'`. We use `[IO.File]::WriteAllText` with a BOM-less UTF-8 encoding so `machine.js` can parse the file without throwing on a BOM byte:
 
 ```powershell
 $m = Get-Content studio\machine.example.json -Raw | ConvertFrom-Json
-$m.'bld-3090' | ConvertTo-Json -Depth 8 | Set-Content C:\Users\goldg\AIDevCompanyHQ\.studio\machine.json -Encoding UTF8
+$json = $m.profiles.'bld-3090' | ConvertTo-Json -Depth 8
+[IO.File]::WriteAllText('C:\Users\goldg\AIDevCompanyHQ\.studio\machine.json', $json, (New-Object Text.UTF8Encoding $false))
 Get-Content C:\Users\goldg\AIDevCompanyHQ\.studio\machine.json
 ```
 
@@ -363,16 +385,20 @@ If it fails: `PROCESSOR` shows a CPU share (for example `18%/82% CPU/GPU`) → t
 
 ### 6.1 Concurrency benchmark (live)
 
+(The benchmark comes from Sprint 2 lane B; confirm it is present in 2.2.)
+
 Make sure nothing else uses the GPU, then:
 
 ```powershell
 cd C:\Users\goldg\StudioControlRoom
-node bench/concurrency.js --live
+node bench/concurrency.js run
 ```
 
-Expected: the benchmark runs the model at 1, 2, 3 … parallel requests, prints tokens/s per level, and ends with a recommendation such as `recommended: llmSlots=2 numParallel=2`. It takes several minutes.
+Expected: the benchmark runs the model at 1, 2, 3 ... parallel requests, prints tokens/s per level, and ends with a recommendation such as `Recommended llmSlots: 2`. It takes several minutes. A results file is written to `bench/results/concurrency-<date>.md`.
 
-If it fails: `ECONNREFUSED` → Ollama is down (1.6). `--live` not recognised → run `node bench/concurrency.js --help` and use the flag it lists for a real (non-simulated) run. Out-of-memory or CPU offload during the run → go back to 5.1 and lower the context first.
+**Note:** the benchmark measures at `num_ctx: 16384` (half the 32768 in the profile). It may recommend more `llmSlots` than fit at the real context length. After applying the values, recheck §5.1 (100% GPU). Set `numParallel` to at least `llmSlots`.
+
+If it fails: `ECONNREFUSED` → Ollama is down (1.6). `run` not recognised → check that `bench/concurrency.js` exists (redo 2.2 if missing). Out-of-memory or CPU offload during the run → go back to 5.1 and lower the context first.
 
 ### 6.2 Apply the recommendation
 
@@ -381,16 +407,24 @@ Edit `C:\Users\goldg\AIDevCompanyHQ\.studio\machine.json`:
 - `gpu.llmSlots` = the recommended value (concurrent local worker stages)
 - `ollama.numParallel` = the recommended value
 
-Then restart Ollama so the new parallelism applies, and confirm:
+Set the parallelism as a user environment variable so Ollama picks it up on restart (the `Start-Process` command does not inherit the machine file):
+
+```powershell
+[Environment]::SetEnvironmentVariable('OLLAMA_NUM_PARALLEL', '<value from bench>', 'User')
+$env:OLLAMA_NUM_PARALLEL = '<value from bench>'
+```
+
+Then stop and restart Ollama, and confirm the value took effect (not just `/api/version` which passes either way):
 
 ```powershell
 Get-Process ollama* -ErrorAction SilentlyContinue | Stop-Process -Force
-Start-Process ollama -ArgumentList serve -WindowStyle Hidden
+Start-Process ollama -ArgumentList serve -WindowStyle Hidden -RedirectStandardError "$env:TEMP\ollama-serve.log"
 Start-Sleep 5
 Invoke-RestMethod http://127.0.0.1:11434/api/version
+Select-String -Path "$env:TEMP\ollama-serve.log" -Pattern 'OLLAMA_NUM_PARALLEL' | Select-Object -Last 3
 ```
 
-Expected: a version is returned. If you set the profile in the machine file, the Control Room start-up helper also exports `OLLAMA_NUM_PARALLEL` from it.
+Expected: a version is returned; the redirected log shows `OLLAMA_NUM_PARALLEL: <value>` matching what you set.
 
 If it fails: Ollama does not come back → start it from the Start menu and check `%LOCALAPPDATA%\Ollama\server.log`.
 
@@ -403,6 +437,13 @@ node tools\engine\engine.js status
 ```
 
 Expected: the run is created, its stages go to `done`, and the final status is `done` (the smoke pipeline needs no owner gate; it is the self-test). If you run this while the studio switch is Paused, first `node .studio\studio.js resume` on BLD. BLD has its own copy of the state, so this does not affect the 5090.
+
+After smoke passes, **pause BLD again** and clean up the smoke run so the supervisor (§8) does not pick it up:
+
+```powershell
+node .studio\studio.js pause
+Remove-Item -Recurse -Force .studio\runs\smoke-* -ErrorAction SilentlyContinue
+```
 
 If it fails: `bash.exe not found` → fix `gitBash` (section 4). A stage that fails verification → open its log under `.studio\runs\<runId>\`. Model errors → check `ollama ps` and 5.1. Do not go on until smoke is green.
 
@@ -481,19 +522,38 @@ Get-ScheduledTask -TaskName StudioSupervisor | Select-Object TaskName, State
 
 Expected: `-WhatIf` prints what it would register; the real run registers the task "StudioSupervisor" (At startup, runs whether the user is logged on or not, restart every 1 minute up to 999 times, highest privileges) running `node studio\studio.js supervise` with `STUDIO_HOME` set. `State` is `Ready`.
 
-You may be asked for the `goldg` password, because the task runs when the user is not logged on.
+**Before starting:** if you have a manual `studio.js serve` still running from section 7, stop it now (the supervisor will start its own). Also make sure `machine.json.controlRoom.bind` is set to `0.0.0.0` if you only used the `$env:STUDIO_BIND` shortcut in 7.2 — the scheduled task does not inherit terminal env vars.
 
-Start it now and check:
+**Credential check from task context.** The task uses `-LogonType S4U` ("no password"), so no password prompt appears. However, S4U sessions cannot decrypt DPAPI-protected credentials (where `gh` and Git store tokens by default). Verify access works from the task context with a one-shot check:
 
 ```powershell
-Start-ScheduledTask -TaskName StudioSupervisor
-Start-Sleep 70
+# Register a temporary S4U task that writes its output to a temp file
+$outFile = "$env:TEMP\s4u-cred-check.txt"
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' `
+    -Argument "-NoProfile -Command gh auth status *>> `"$outFile`"; git ls-remote https://github.com/chalupuh/AIDevCompanyHQ HEAD *>> `"$outFile`""
+$principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType S4U -RunLevel Highest
+Register-ScheduledTask -TaskName CredentialCheck -Action $action -Principal $principal -Force
+Start-ScheduledTask -TaskName CredentialCheck
+Start-Sleep 15
+Get-Content $outFile
+Unregister-ScheduledTask -TaskName CredentialCheck -Confirm:$false
+```
+
+Expected: the file contains `Logged in to github.com account chalupuh` and a line with `<sha> 	HEAD`.
+
+If `gh auth status` fails from the task context, `git push` and `gh pr create` from supervisor-launched runs will fail. The fallback options (changing the logon type to `Interactive`/`Password` in lane H, or `gh auth login --insecure-storage` on BLD) are the owner's decision. See also §9.7 failure path.
+
+**Do not start the supervisor yet.** It is started in §9.5 after the final copy. Verify the installation with a dry run and manual supervise check:
+
+```powershell
+node studio\studio.js supervise
+Start-Sleep 10
 Get-Content C:\Users\goldg\AIDevCompanyHQ\.studio\logs\supervisor.log -Tail 10
 ```
 
-Expected: the log shows supervisor ticks, Ollama and the Control Room kept alive. The task `State` becomes `Running`. To remove later: `install-service.ps1 -Uninstall`.
+Expected: the log shows supervisor ticks, Ollama and the Control Room kept alive. Stop the manual supervise with `Ctrl+C`. To remove the scheduled task later: `install-service.ps1 -Uninstall`.
 
-If it fails: `State` goes to `Ready` right away → run `node studio\studio.js supervise` in a terminal to see the error. Log empty → `STUDIO_HOME` not set for the task; rerun the installer. Logon failure → the password was wrong; reinstall.
+If it fails: `State` goes to `Ready` right away → run `node studio\studio.js supervise` in a terminal to see the error. Log empty → `STUDIO_HOME` not set for the task; rerun the installer.
 
 ### 8.2 Power settings: never sleep
 
@@ -563,20 +623,7 @@ Expected: a new `<date>.zip` in `.studio\backups`. Keep it until the rollback wi
 
 If it fails: `backup` unknown → the lane H PR is missing on the 5090 checkout; instead zip the folders by hand: `Compress-Archive -Path .studio\runs,.studio\checkpoints,.studio\roster.json,.studio\events.jsonl -DestinationPath $env:USERPROFILE\studio-before-cutover.zip`.
 
-### 9.3 Final state copy
-
-Repeat section 3.3 (the same method) from the 5090 to BLD. For a final copy remove stale files too: change `/E` to `/MIR` in the robocopy lines for `runs`, `checkpoints` and `portraits`. Then run the verification in 3.4 on BLD. Make sure `locks\`, `server.pid`, `auth.json` and `machine.json` are still **not** copied (BLD's own `machine.json` must remain).
-
-```powershell
-# [BLD] machine.json must still be the BLD profile
-(Get-Content C:\Users\goldg\AIDevCompanyHQ\.studio\machine.json | ConvertFrom-Json).name
-```
-
-Expected: `bld-3090`.
-
-If it fails: it prints `goldg-5090` → the 5090 file was copied by mistake; redo section 4 and delete `locks\`.
-
-### 9.4 Stop the 5090's background work [5090]
+### 9.3 Stop the 5090's background work [5090]
 
 ```powershell
 Get-Process node -ErrorAction SilentlyContinue | Select-Object Id, Path
@@ -586,19 +633,60 @@ Stop the studio supervisor, Control Room and any engine on the 5090 (close their
 
 Expected: no node process on the 5090 runs `studio.js` or `engine.js`.
 
+### 9.4 Final state copy
+
+**[BLD] Stop the supervisor first** so it does not read `control.json` while robocopy overwrites it:
+
+```powershell
+Stop-ScheduledTask -TaskName StudioSupervisor
+node .studio\studio.js status   # must show Paused
+```
+
+Before the final copy, handle any unfinished runs that point at worktrees only on the 5090:
+1. On the 5090, `node tools\engine\engine.js status` — list each run not yet `done` or `parked`.
+2. For each, note the `workdir` (a `StudioLanes/<lane>` path or an app repo). Review what would be committed:
+   ```powershell
+   git -C <workdir> status --short   # review: nothing secret, nothing generated
+   git -C <workdir> add <paths>      # only the paths you reviewed above
+   git -C <workdir> commit -m "wip: save state before cutover"
+   git -C <workdir> push -u origin HEAD
+   ```
+   Never push to `main`. If anything in `status` looks like a secret, stop and ask the owner.
+3. On BLD, `git -C <parent-repo> fetch` then `git -C <parent-repo> worktree add <workdir> <branch>`, or `git clone <repo> <workdir>` for each. If you prefer to finish or park those runs first, do so and skip this step.
+
+Repeat section 3.3 (the same method) from the 5090 to BLD. For a final copy remove stale files too: change `/E` to `/MIR` in the robocopy lines for `runs`, `checkpoints` and `portraits`. Note that `scp` cannot mirror — if you used method B, change `/MIR` to `/E` and manually delete files on BLD that no longer exist on the 5090.
+
+**Verification (BLD):** do **not** rerun §3.4 — that check is for the trial copy and would tell you to delete BLD's legitimate `machine.json` and `auth.json`. Instead:
+
+```powershell
+# [BLD]  — confirm BLD's own config is intact
+(Get-Content C:\Users\goldg\AIDevCompanyHQ\.studio\machine.json | ConvertFrom-Json).name
+Test-Path C:\Users\goldg\AIDevCompanyHQ\.studio\auth.json
+```
+
+Expected: `bld-3090` and `True`.
+
+If it fails: `machine.json` prints `goldg-5090` → the 5090 file was copied by mistake; redo section 4.
+
 ### 9.5 Start the supervisor on BLD
+
+**Precondition:** BLD's switch must be **Paused** before starting the supervisor, otherwise it will auto-resume runs that haven't been verified yet.
 
 ```powershell
 # [BLD]
-Get-ScheduledTask -TaskName StudioSupervisor | Select-Object State
-Start-ScheduledTask -TaskName StudioSupervisor   # if it is not already Running
 cd C:\Users\goldg\AIDevCompanyHQ
-node .studio\studio.js status
+node .studio\studio.js status   # must show Paused
 ```
 
-Expected: the supervisor is `Running`; `status` shows the switch still **Paused** (the state came over paused) and lists the checkpoints that came across.
+If the switch shows **Running**, pause first: `node .studio\studio.js pause`. Then start:
 
-If it fails: see 8.1.
+```powershell
+Start-ScheduledTask -TaskName StudioSupervisor
+```
+
+Expected: the supervisor is `Running`; `status` shows the switch still **Paused** and lists the checkpoints that came across.
+
+If it fails: `status` shows Running instead of Paused after the supervisor starts → the `control.json` that was copied had the wrong state; run `node .studio\studio.js pause` and retry. See also 8.1.
 
 ### 9.6 Resume the runs
 

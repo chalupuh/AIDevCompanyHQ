@@ -79,6 +79,7 @@ if ($nvidiaOnPath) {
     }
 
     $cudaVer = 0
+    $cudaFallback = $false
     # Try extracting CUDA version from nvidia-smi header.
     # Iterate explicitly (not Where-Object) so $Matches stays in scope.
     if ($smiLines) {
@@ -90,15 +91,15 @@ if ($nvidiaOnPath) {
         }
     }
     # Fallback: estimate CUDA from driver version (nvidia-smi header may not
-    # parse reliably on all locales/encodings). Driver 550+ → CUDA 12, etc.
+    # parse reliably on all locales/encodings). Driver 527+ -> CUDA 12, etc.
     if ($cudaVer -eq 0 -and $gpuDriver) {
         $drvMajor = 0
         if ($gpuDriver -match '^(\d+)') { $drvMajor = [int]$Matches[1] }
-        if ($drvMajor -ge 550)    { $cudaVer = 12 }
-        elseif ($drvMajor -ge 516) { $cudaVer = 11 }
-        elseif ($drvMajor -ge 450) { $cudaVer = 11 }
+        if ($drvMajor -ge 527)    { $cudaVer = 12 }
+        elseif ($drvMajor -ge 452) { $cudaVer = 11 }
         elseif ($drvMajor -ge 390) { $cudaVer = 10 }
         elseif ($drvMajor -ge 384) { $cudaVer = 9 }
+        $cudaFallback = $true
     }
 
     if ($csv) {
@@ -114,7 +115,9 @@ if ($nvidiaOnPath) {
             $miB -ge 24576
         }
 
-        Write-Host ("        CUDA     : " + $cudaVer)
+        $cudaLabel = $cudaVer
+        if ($cudaFallback) { $cudaLabel = "$cudaVer (estimated from driver)" }
+        Write-Host ("        CUDA     : " + $cudaLabel)
         $null = Check "CUDA >= 12" { $cudaVer -ge 12 }
     } else {
         Write-Host ("  [FAIL] Could not query GPU info") -ForegroundColor Red
@@ -156,18 +159,22 @@ $null = Check "git installed" {
     $null -ne (Get-Command git -ErrorAction SilentlyContinue)
 }
 
-# Git Bash: test default path as a warning (runbook §1.3 allows a custom path).
+# Git Bash: test default path as a warning (runbook section 1.3 allows a custom path).
 # Also try deriving from `where.exe git` for non-default installs.
-$null = Warn "Git Bash at default path" {
+$foundBashPath = ''
+$null = Warn "Git Bash found" {
     $ok = Test-Path "C:\Program Files\Git\bin\bash.exe"
+    if ($ok) { $foundBashPath = "C:\Program Files\Git\bin\bash.exe" }
     if (-not $ok) {
-        # Derive bash path from `where.exe git` → parent\bin\bash.exe
+        # Derive bash path from `where.exe git` -> parent/bin/bash.exe
         $gitPath = where.exe git 2>$null | Select-Object -First 1
         if ($gitPath) {
             $bashPath = Join-Path (Split-Path (Split-Path $gitPath) ) "bin\bash.exe"
             $ok = Test-Path $bashPath
+            if ($ok) { $foundBashPath = $bashPath }
         }
     }
+    if ($foundBashPath) { Write-Host ("        Path   : " + $foundBashPath) }
     $ok
 }
 
