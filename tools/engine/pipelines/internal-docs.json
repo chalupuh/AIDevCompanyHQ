@@ -62,7 +62,7 @@
           "expect": [
             "docs/internal/qa/s{{sprint}}-task-{{n}}.md"
           ],
-          "check": "node -e \"if(!/VERDICT: PASS/.test(require('fs').readFileSync('{{home}}/docs/internal/qa/s{{sprint}}-task-{{n}}.md','utf8')))process.exit(1)\""
+          "check": "node -e \"if(!/VERDICT:[\\s*_\\x60]*PASS/.test(require('fs').readFileSync('{{home}}/docs/internal/qa/s{{sprint}}-task-{{n}}.md','utf8')))process.exit(1)\""
         }
       ]
     },
@@ -84,7 +84,7 @@
       "expect": [
         "docs/internal/review-sprint{{sprint}}.md"
       ],
-      "check": "node -e \"if(!/APPROVEs*$/.test(require('fs').readFileSync('{{home}}/docs/internal/review-sprint{{sprint}}.md','utf8').trim()))process.exit(1)\""
+      "check": "node -e \"const l=require('fs').readFileSync('{{home}}/docs/internal/review-sprint{{sprint}}.md','utf8').trim().split('\\n').pop().replace(/[\\s*_\\x60]+/g,' ').trim();if(!/\\bAPPROVE$/.test(l))process.exit(1)\""
     },
     {
       "id": "tick",
