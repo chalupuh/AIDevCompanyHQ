@@ -18,9 +18,10 @@
         "docs/research/backlog.md"
       ],
       "dod": [
-        "## Theme",
+        "**Theme:**",
+        "## Targets",
         "## Constraints",
-        "## Targets"
+        "## Questions for the researcher"
       ],
       "task": "Fill docs/research/brief-template.md into docs/research/cycles/{{date}}/brief.md. Theme: {{theme}}. Read docs/research/backlog.md so covered ideas are skipped.",
       "expect": [
@@ -35,7 +36,8 @@
       "maxTurns": 40,
       "timeoutMin": 45,
       "requires": [
-        "docs/research/cycles/{{date}}/brief.md"
+        "docs/research/cycles/{{date}}/brief.md",
+        "docs/research/METHODOLOGY.md"
       ],
       "dod": [
         "## Hot",
@@ -71,11 +73,19 @@
         "docs/research/cycles/{{date}}/scan.md"
       ],
       "dod": [
-        "docs/research/ideas/<slug>.md per idea, each with headings: ## Pitch, ## Target User, ## Evidence, ## Competitors & Differentiation, ## MVP Features, ## Score Breakdown, ## Risks"
+        "Working name and pitch",
+        "Target user",
+        "Differentiator",
+        "MVP feature list",
+        "Platforms & needs",
+        "Ease-of-development",
+        "Monetization",
+        "Score",
+        "Risks"
       ],
       "task": "Analyze the FIRST HALF of the ideas on the 'ANALYZE:' line at the end of docs/research/cycles/{{date}}/scan.md. Write one docs/research/ideas/<slug>.md per idea, per your role file.",
       "expect": [
-        "docs/research/cycles/{{date}}/scan.md"
+        "docs/research/ideas/"
       ],
       "allowedTools": [
         "Read",
@@ -99,11 +109,19 @@
         "docs/research/cycles/{{date}}/scan.md"
       ],
       "dod": [
-        "docs/research/ideas/<slug>.md per idea, each with headings: ## Pitch, ## Target User, ## Evidence, ## Competitors & Differentiation, ## MVP Features, ## Score Breakdown, ## Risks"
+        "Working name and pitch",
+        "Target user",
+        "Differentiator",
+        "MVP feature list",
+        "Platforms & needs",
+        "Ease-of-development",
+        "Monetization",
+        "Score",
+        "Risks"
       ],
       "task": "Analyze the SECOND HALF of the ideas on the 'ANALYZE:' line at the end of docs/research/cycles/{{date}}/scan.md. Write one docs/research/ideas/<slug>.md per idea, per your role file.",
       "expect": [
-        "docs/research/cycles/{{date}}/scan.md"
+        "docs/research/ideas/"
       ],
       "allowedTools": [
         "Read",
@@ -124,7 +142,10 @@
       "maxTurns": 30,
       "requires": [
         "docs/research/cycles/{{date}}/scan.md",
-        "docs/research/ideas/*.md"
+        "docs/research/cycles/{{date}}/brief.md",
+        "docs/research/ideas/*.md",
+        "docs/research/backlog.md",
+        "docs/research/METHODOLOGY.md"
       ],
       "dod": [
         "## Summary Table",
