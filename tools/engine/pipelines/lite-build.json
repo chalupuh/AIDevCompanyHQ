@@ -20,7 +20,7 @@
           "rework": { "to": "build", "verdict": "{{home}}/docs/specs/{{slug}}.qa-m{{n}}.md", "failRegex": "VERDICT:[\\s*_`]*FAIL", "max": 3 },
           "expect": ["{{home}}/docs/specs/{{slug}}.qa-m{{n}}.md"],
           "check": "node -e \"if(!/VERDICT:[\\s*_\\x60]*PASS/.test(require('fs').readFileSync('{{home}}/docs/specs/{{slug}}.qa-m{{n}}.md','utf8')))process.exit(1)\"" },
-        { "id": "review", "type": "agent", "agent": "code-reviewer", "tier": "opus", "maxTurns": 25,
+        { "id": "review", "type": "agent", "agent": "code-reviewer", "tier": "opus", "maxTurns": 60,
           "task": "Review the whole diff for '{{item}}' of {{slug}}. Write {{home}}/docs/specs/{{slug}}.review-m{{n}}.md ending with 'APPROVE' or 'REQUEST CHANGES'.",
           "rework": { "to": "build", "verdict": "{{home}}/docs/specs/{{slug}}.review-m{{n}}.md", "failRegex": "REQUEST CHANGES[\\s*_`]*$", "max": 3 },
           "expect": ["{{home}}/docs/specs/{{slug}}.review-m{{n}}.md"],
