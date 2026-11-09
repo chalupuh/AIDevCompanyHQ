@@ -20,9 +20,13 @@ Rules while following this runbook:
 
 ## 1. Prerequisites check [BLD]
 
-Run the checks one by one. Every one must pass before section 2.
+From the HQ directory, run:
 
-> A read-only script that runs all of these checks and prints PASS/FAIL (`tools/bld-preflight.ps1`) is planned in Sprint 4 lane J. Once it exists, run `powershell -File tools\bld-preflight.ps1` from `HQ` and use the manual commands below only for anything it reports as FAIL.
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\bld-preflight.ps1
+```
+
+It prints PASS/FAIL for every prerequisite plus GPU name/VRAM and exits non-zero on any failure. Every check must pass before section 2. Use the manual commands below only for sections it reports as FAIL.
 
 ### 1.1 NVIDIA driver and CUDA
 
