@@ -5,7 +5,7 @@ Step-by-step move of the always-on studio host from the 5090 PC to **BLD** (Wind
 Names used below:
 
 - **5090** = the current PC (RTX 5090, 32 GB). **BLD** = the target host.
-- `HQ` = `C:\Users\goldg\AIDevCompanyHQ` (org repo, runtime data in `HQ\.studio`).
+- `HQ` = `C:\Users\goldg\AI Development Company` (org repo, runtime data in `HQ\.studio`).
 - `SOFT` = `C:\Users\goldg\StudioControlRoom` (software repo).
 - Commands marked **[BLD]** run on BLD (in PowerShell, either on its console or via `ssh goldg@192.168.1.117`). Commands marked **[5090]** run on the 5090 PC.
 
@@ -124,9 +124,9 @@ If it fails: free space (old downloads, `%TEMP%`, Windows Disk Cleanup) or point
 
 ```powershell
 cd C:\Users\goldg
-gh repo clone chalupuh/AIDevCompanyHQ
+gh repo clone chalupuh/AIDevCompanyHQ "C:\Users\goldg\AI Development Company"
 gh repo clone chalupuh/StudioControlRoom
-Get-ChildItem -Directory | Where-Object Name -in 'AIDevCompanyHQ','StudioControlRoom'
+Get-ChildItem -Directory | Where-Object Name -in 'AI Development Company','StudioControlRoom'
 ```
 
 Expected: both folders listed, directly under `C:\Users\goldg` (the software finds the org by the sibling path and by `studio.home.json`).
@@ -138,8 +138,8 @@ If it fails: `authentication failed` → redo 1.4. `destination path already exi
 ```powershell
 git -C C:\Users\goldg\StudioControlRoom checkout main
 git -C C:\Users\goldg\StudioControlRoom pull --ff-only
-git -C C:\Users\goldg\AIDevCompanyHQ checkout main
-git -C C:\Users\goldg\AIDevCompanyHQ pull --ff-only
+git -C C:\Users\goldg\AI Development Company checkout main
+git -C C:\Users\goldg\AI Development Company pull --ff-only
 Test-Path C:\Users\goldg\StudioControlRoom\studio\machine.js
 Test-Path C:\Users\goldg\StudioControlRoom\studio\supervisor.js
 Test-Path C:\Users\goldg\StudioControlRoom\studio\install-service.ps1
@@ -150,23 +150,19 @@ Expected: both pulls succeed and all four `Test-Path` lines print `True`.
 
 If it fails: a `False` means the Sprint 4 PR for that file (lane H: machine, supervisor, install-service; lane I: firewall, pairing) is not merged yet. Stop and ask the Engineering Manager to merge it first.
 
-### 2.3 studio.home.json
+### 2.3 Create studio.home.json
 
-`SOFT\studio.home.json` points the software at the org checkout.
+`SOFT\studio.home.json` is git-ignored, so a fresh clone does not have one. Create it to point the software at the org checkout:
 
 ```powershell
+$json = @{ home = 'C:/Users/goldg/AI Development Company' } | ConvertTo-Json
+[IO.File]::WriteAllText('C:\Users\goldg\StudioControlRoom\studio.home.json', $json, (New-Object Text.UTF8Encoding $false))
 Get-Content C:\Users\goldg\StudioControlRoom\studio.home.json
 ```
 
-Expected: a JSON object whose home path is `C:\Users\goldg\AIDevCompanyHQ` (or a relative `..\AIDevCompanyHQ`).
+Expected: outputs `{"home":"C:/Users/goldg/AI Development Company"}`.
 
-If it fails or shows another path (for example a path from the 5090): edit the file so it names `C:\Users\goldg\AIDevCompanyHQ`, and commit that change through a PR only if the repo tracks it. Alternatively set `STUDIO_HOME` (user env var) to the same path:
-
-```powershell
-[Environment]::SetEnvironmentVariable('STUDIO_HOME','C:\Users\goldg\AIDevCompanyHQ','User')
-```
-
-Open a new terminal afterwards.
+If `Get-Content` shows another path: overwrite with the correct command above. Do not commit this file — it is git-ignored because it contains a host-specific path.
 
 ### 2.4 Install and build the Control Room UI
 
@@ -191,7 +187,7 @@ Runtime state lives in `HQ\.studio` and is not in git. Copy it **with the studio
 ### 3.1 Pause the studio [5090]
 
 ```powershell
-cd C:\Users\goldg\AIDevCompanyHQ
+cd C:\Users\goldg\AI Development Company
 node .studio\studio.js pause
 node .studio\studio.js status
 ```
@@ -211,7 +207,7 @@ Copy:
 | Pause switch | `control.json` |
 | Roster | `roster.json` (only if uncommitted changes exist — tracked in git) |
 | Portraits | `portraits\` (only if uncommitted changes exist — tracked in git) |
-| Events log | `events.jsonl` (and any rotated `events*.jsonl`) |
+| Events log | `events.jsonl` (rotated `events*.jsonl` are host-specific logs and optional) |
 
 Do **not** copy (they are per machine or secret):
 
@@ -225,12 +221,12 @@ Do **not** copy (they are per machine or secret):
 
 Choose **one** method. Method A uses an SMB share on BLD; method B needs nothing but SSH.
 
-**Method A: SMB (recommended, robocopy resumes and verifies).** On BLD, create the target folders and share them once:
+**Method A: SMB (recommended, robocopy resumes and verifies).** On BLD, create the target folders and share them once (requires an elevated/ administrator PowerShell for `net share`):
 
 ```powershell
 # [BLD]
-New-Item -ItemType Directory -Force C:\Users\goldg\AIDevCompanyHQ\.studio | Out-Null
-net share StudioState=C:\Users\goldg\AIDevCompanyHQ\.studio /GRANT:goldg,CHANGE
+New-Item -ItemType Directory -Force C:\Users\goldg\AI Development Company\.studio | Out-Null
+net share StudioState="C:\Users\goldg\AI Development Company\.studio" /GRANT:goldg,CHANGE
 ```
 
 Then on the 5090:
@@ -238,7 +234,7 @@ Then on the 5090:
 ```powershell
 # [5090]  (you will be asked for the BLD goldg password once)
 net use \\192.168.1.117\StudioState /user:goldg
-$src = 'C:\Users\goldg\AIDevCompanyHQ\.studio'
+$src = 'C:\Users\goldg\AI Development Company\.studio'
 $dst = '\\192.168.1.117\StudioState'
 $bld = 'goldg@192.168.1.117'
 robocopy "$src\runs"        "$dst\runs"        /E /COPY:DAT /R:2 /W:2 /NP /LOG+:$env:TEMP\bld-copy.log
@@ -256,11 +252,11 @@ Expected: each robocopy ends with `Failed : 0`, share delete prints `"StudioStat
 
 ```powershell
 # [5090]
-$src = 'C:\Users\goldg\AIDevCompanyHQ\.studio'
+$src = 'C:\Users\goldg\AI Development Company\.studio'
 $bld = 'goldg@192.168.1.117'
-ssh $bld "powershell -Command New-Item -ItemType Directory -Force C:\Users\goldg\AIDevCompanyHQ\.studio"
-scp -r "$src\runs" "$src\checkpoints" "$src\portraits" "${bld}:C:/Users/goldg/AIDevCompanyHQ/.studio/"
-scp "$src\roster.json" "$src\control.json" "$src\events.jsonl" "${bld}:C:/Users/goldg/AIDevCompanyHQ/.studio/"
+ssh $bld "powershell -Command New-Item -ItemType Directory -Force C:\Users\goldg\AI Development Company\.studio"
+scp -r "$src\runs" "$src\checkpoints" "$src\portraits" "${bld}:'C:/Users/goldg/AI Development Company/.studio/'"
+scp "$src\roster.json" "$src\control.json" "$src\events.jsonl" "${bld}:'C:/Users/goldg/AI Development Company/.studio/'"
 ```
 
 Expected (method A): each robocopy ends with a summary table and `Failed : 0`, and the exit code is 0–7 (robocopy codes 0–7 are success; 8 or more is failure). Method B: scp prints each file with 100%.
@@ -270,7 +266,7 @@ If it fails: `System error 53` or `1219` on `net use` → SMB is blocked or cred
 ### 3.4 Verify the copy [BLD]
 
 ```powershell
-cd C:\Users\goldg\AIDevCompanyHQ\.studio
+cd C:\Users\goldg\AI Development Company\.studio
 (Get-ChildItem runs -Recurse -File | Measure-Object).Count
 Get-ChildItem checkpoints -ErrorAction SilentlyContinue | Measure-Object | Select-Object Count
 Test-Path roster.json, events.jsonl
@@ -285,10 +281,11 @@ If it fails: counts differ → rerun the copy. A `True` for `machine.json`, `aut
 
 ```powershell
 # [BLD]
-cd C:\Users\goldg\AIDevCompanyHQ\.studio
-Remove-Item -Recurse -Force runs\ checkpoints\ -ErrorAction SilentlyContinue
-node ..\.studio\studio.js pause
-node ..\.studio\studio.js status
+cd C:\Users\goldg\AI Development Company\.studio
+Remove-Item -Recurse -Force -Path runs, checkpoints -ErrorAction SilentlyContinue
+cd C:\Users\goldg\AI Development Company
+node .studio\studio.js pause
+node .studio\studio.js status
 ```
 
 Expected: `status` shows the switch as **Paused**, and `(Get-ChildItem runs -ErrorAction SilentlyContinue | Measure-Object).Count` returns `0`.
@@ -322,8 +319,8 @@ Write the BLD profile (adjust `gitBash` if you recorded a different path in 1.3)
 ```powershell
 $m = Get-Content studio\machine.example.json -Raw | ConvertFrom-Json
 $json = $m.profiles.'bld-3090' | ConvertTo-Json -Depth 8
-[IO.File]::WriteAllText('C:\Users\goldg\AIDevCompanyHQ\.studio\machine.json', $json, (New-Object Text.UTF8Encoding $false))
-Get-Content C:\Users\goldg\AIDevCompanyHQ\.studio\machine.json
+[IO.File]::WriteAllText('C:\Users\goldg\AI Development Company\.studio\machine.json', $json, (New-Object Text.UTF8Encoding $false))
+Get-Content C:\Users\goldg\AI Development Company\.studio\machine.json
 ```
 
 Expected fields, with these values (shape from `studio/machine.js`):
@@ -402,15 +399,14 @@ If it fails: `ECONNREFUSED` → Ollama is down (1.6). `run` not recognised → c
 
 ### 6.2 Apply the recommendation
 
-Edit `C:\Users\goldg\AIDevCompanyHQ\.studio\machine.json`:
+Edit `C:\Users\goldg\AI Development Company\.studio\machine.json`:
 
 - `gpu.llmSlots` = the recommended value (concurrent local worker stages)
 - `ollama.numParallel` = the recommended value
 
-Set the parallelism as a user environment variable so Ollama picks it up on restart (the `Start-Process` command does not inherit the machine file):
+Set the parallelism in the current session for the manual restart test below. Do **not** persist it as a user variable — the supervisor (§8) reads `ollama.numParallel` from `machine.json`, and a user variable would override `machine.json` for all processes (see `power.js:105`).
 
 ```powershell
-[Environment]::SetEnvironmentVariable('OLLAMA_NUM_PARALLEL', '<value from bench>', 'User')
 $env:OLLAMA_NUM_PARALLEL = '<value from bench>'
 ```
 
@@ -431,7 +427,7 @@ If it fails: Ollama does not come back → start it from the Start menu and chec
 ### 6.3 Smoke pipeline
 
 ```powershell
-cd C:\Users\goldg\AIDevCompanyHQ
+cd C:\Users\goldg\AI Development Company
 node tools\engine\engine.js start smoke
 node tools\engine\engine.js status
 ```
@@ -473,7 +469,7 @@ If it fails: `not elevated` → open PowerShell as administrator. Rule already e
 Pick one (the machine file is preferred because the service in section 8 reads it too):
 
 ```powershell
-# A) machine.json: set controlRoom.bind to "0.0.0.0" in C:\Users\goldg\AIDevCompanyHQ\.studio\machine.json
+# A) machine.json: set controlRoom.bind to "0.0.0.0" in C:\Users\goldg\AI Development Company\.studio\machine.json
 # B) one-off, for this terminal only:
 $env:STUDIO_BIND = '0.0.0.0'
 ```
@@ -481,7 +477,7 @@ $env:STUDIO_BIND = '0.0.0.0'
 Start the Control Room and check it is reachable from the LAN address:
 
 ```powershell
-cd C:\Users\goldg\AIDevCompanyHQ
+cd C:\Users\goldg\AI Development Company
 node .studio\studio.js serve
 # in a second terminal:
 netstat -ano | Select-String ':4777'
@@ -529,8 +525,10 @@ Expected: `-WhatIf` prints what it would register; the real run registers the ta
 ```powershell
 # Register a temporary S4U task that writes its output to a temp file
 $outFile = "$env:TEMP\s4u-cred-check.txt"
+Remove-Item $outFile -ErrorAction SilentlyContinue
+$hqPath = "C:\Users\goldg\AI Development Company"
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
-    -Argument "-NoProfile -Command gh auth status *>> `"$outFile`"; git ls-remote https://github.com/chalupuh/AIDevCompanyHQ HEAD *>> `"$outFile`""
+    -Argument "-NoProfile -Command gh auth status *>> `"$outFile`"; gh api user --jq .login *>> `"$outFile`"; git -C `"`"$hqPath`"`" push --dry-run origin HEAD:refs/heads/s4u-credcheck *>> `"$outFile`""
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType S4U -RunLevel Highest
 Register-ScheduledTask -TaskName CredentialCheck -Action $action -Principal $principal -Force
 Start-ScheduledTask -TaskName CredentialCheck
@@ -539,21 +537,21 @@ Get-Content $outFile
 Unregister-ScheduledTask -TaskName CredentialCheck -Confirm:$false
 ```
 
-Expected: the file contains `Logged in to github.com account chalupuh` and a line with `<sha> 	HEAD`.
+Expected: the file contains `Logged in to github.com account chalupuh`, a line with `chalupuh` from `gh api user`, and a dry-run line such as `[new branch] HEAD -> s4u-credcheck` with **no** `Authentication failed` or `could not read Username` errors. The dry-run verifies push credentials (which S4U cannot decrypt from DPAPI) without creating any remote ref.
 
 If `gh auth status` fails from the task context, `git push` and `gh pr create` from supervisor-launched runs will fail. The fallback options (changing the logon type to `Interactive`/`Password` in lane H, or `gh auth login --insecure-storage` on BLD) are the owner's decision. See also §9.7 failure path.
 
-**Do not start the supervisor yet.** It is started in §9.5 after the final copy. Verify the installation with a dry run and manual supervise check:
+**Do not start the supervisor from this terminal yet.** It is started in §9.5 after the final copy. A boot-time start by the scheduled task is expected and safe — BLD is in Paused state with an empty `runs` folder (`supervisor.js:160`), so it simply waits. Verify the installation with a dry-run manual supervise:
 
 ```powershell
 node studio\studio.js supervise
 Start-Sleep 10
-Get-Content C:\Users\goldg\AIDevCompanyHQ\.studio\logs\supervisor.log -Tail 10
+Get-Content C:\Users\goldg\AI Development Company\.studio\logs\supervisor.log -Tail 10
 ```
 
-Expected: the log shows supervisor ticks, Ollama and the Control Room kept alive. Stop the manual supervise with `Ctrl+C`. To remove the scheduled task later: `install-service.ps1 -Uninstall`.
+Expected: the log shows supervisor ticks, Ollama and the Control Room kept alive. Stop the manual supervise with `Ctrl+C` — note that `Ctrl+C` stops only the supervisor process; the Control Room and Ollama it started via `power.startup` keep running until you log off or stop them manually. To remove the scheduled task later: `install-service.ps1 -Uninstall`.
 
-If it fails: `State` goes to `Ready` right away → run `node studio\studio.js supervise` in a terminal to see the error. Log empty → `STUDIO_HOME` not set for the task; rerun the installer.
+If it fails: the manual supervise itself shows errors on stdout. Log empty → `STUDIO_HOME` not set for the task; rerun the installer.
 
 ### 8.2 Power settings: never sleep
 
@@ -602,7 +600,7 @@ Only the owner starts this section. It makes BLD the primary host. Allow about 3
 ### 9.1 Pause the 5090 [5090]
 
 ```powershell
-cd C:\Users\goldg\AIDevCompanyHQ
+cd C:\Users\goldg\AI Development Company
 node .studio\studio.js pause
 node .studio\studio.js status
 node tools\engine\engine.js status
@@ -639,6 +637,7 @@ Expected: no node process on the 5090 runs `studio.js` or `engine.js`.
 
 ```powershell
 Stop-ScheduledTask -TaskName StudioSupervisor
+cd C:\Users\goldg\AI Development Company
 node .studio\studio.js status   # must show Paused
 ```
 
@@ -660,13 +659,29 @@ Repeat section 3.3 (the same method) from the 5090 to BLD. For a final copy remo
 
 ```powershell
 # [BLD]  — confirm BLD's own config is intact
-(Get-Content C:\Users\goldg\AIDevCompanyHQ\.studio\machine.json | ConvertFrom-Json).name
-Test-Path C:\Users\goldg\AIDevCompanyHQ\.studio\auth.json
+(Get-Content C:\Users\goldg\AI Development Company\.studio\machine.json | ConvertFrom-Json).name
+Test-Path C:\Users\goldg\AI Development Company\.studio\auth.json
 ```
 
 Expected: `bld-3090` and `True`.
 
 If it fails: `machine.json` prints `goldg-5090` → the 5090 file was copied by mistake; redo section 4.
+
+Also verify that carried-over run records point at BLD's correct HQ path (they were created on the 5090 and freeze `vars.home` at creation time):
+
+```powershell
+# [BLD]  — check one carried-over run record
+$runFile = Get-ChildItem C:\Users\goldg\AI Development Company\.studio\runs\*.json | Select-Object -First 1
+if ($runFile) {
+    (Get-Content $runFile | ConvertFrom-Json).vars.home
+} else {
+    Write-Host "No run records found (expected if no runs were carried over)"
+}
+```
+
+Expected: outputs `C:\Users\goldg\AI Development Company` (matching BLD's HQ path), or "No run records found".
+
+If a run record shows a different path: all stages for that run will fail their file checks. The run must be parked or its `vars.home` manually corrected in the JSON before resuming.
 
 ### 9.5 Start the supervisor on BLD
 
@@ -674,7 +689,7 @@ If it fails: `machine.json` prints `goldg-5090` → the 5090 file was copied by 
 
 ```powershell
 # [BLD]
-cd C:\Users\goldg\AIDevCompanyHQ
+cd C:\Users\goldg\AI Development Company
 node .studio\studio.js status   # must show Paused
 ```
 
@@ -706,7 +721,7 @@ If it fails: no run resumes → check the supervisor log for the reason, and tha
 Start a small, harmless internal task (the owner picks one; a docs-only task is enough):
 
 ```powershell
-node tools\engine\engine.js start internal-build --var task="<one small docs task>" --var workdir="C:\Users\goldg\AIDevCompanyHQ"
+node tools\engine\engine.js start internal-build --var task="<one small docs task>" --var workdir="C:\Users\goldg\AI Development Company"
 node tools\engine\engine.js status
 ```
 
@@ -735,7 +750,7 @@ Use this if BLD cannot do the work. The 5090 state stays intact until you delete
 
 ```powershell
 # [BLD]
-cd C:\Users\goldg\AIDevCompanyHQ
+cd C:\Users\goldg\AI Development Company
 node .studio\studio.js pause
 Stop-ScheduledTask -TaskName StudioSupervisor
 node tools\engine\engine.js status
@@ -751,7 +766,7 @@ Reverse the direction of section 3.3: robocopy or scp from BLD's `.studio` (`run
 
 ```powershell
 # [5090]
-Expand-Archive -Force <path to the 9.2 zip> -DestinationPath C:\Users\goldg\AIDevCompanyHQ\.studio\restore
+Expand-Archive -Force <path to the 9.2 zip> -DestinationPath C:\Users\goldg\AI Development Company\.studio\restore
 ```
 
 Then copy the wanted folders from `restore` into `.studio` by hand.
@@ -760,7 +775,7 @@ Then copy the wanted folders from `restore` into `.studio` by hand.
 
 ```powershell
 # [5090]
-cd C:\Users\goldg\AIDevCompanyHQ
+cd C:\Users\goldg\AI Development Company
 Remove-Item -Recurse -Force .studio\locks -ErrorAction SilentlyContinue
 node .studio\studio.js resume
 node .studio\studio.js status

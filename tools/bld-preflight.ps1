@@ -161,7 +161,6 @@ $null = Check "git installed" {
 
 # Git Bash: test default path as a warning (runbook section 1.3 allows a custom path).
 # Also try deriving from `where.exe git` for non-default installs.
-$foundBashPath = ''
 $null = Warn "Git Bash found" {
     $ok = Test-Path "C:\Program Files\Git\bin\bash.exe"
     if ($ok) { $foundBashPath = "C:\Program Files\Git\bin\bash.exe" }
