@@ -139,9 +139,9 @@ Write checkpoints a stranger could resume from: name the task from design.md or 
 
 Checkpoints are also good for ending a session cleanly, not just for stopping in an emergency.
 
-## Local models on this PC
+## Hosts
 
-Ollama runs on this PC (RTX 5090, 32 GB) at `127.0.0.1:11434`. Models unload after 5 minutes idle, so the GPU frees up. This is an interim setup while BLD is being repaired; keep model names identical to BLD so switching back is a one-line config change. Studio agents still run on Claude for now. Routing roles to local models is a later step (see `docs/local-llm-roadmap.md`).
+Ollama runs on this PC (RTX 5090, 32 GB) at `127.0.0.1:11434`. Models unload after 5 minutes idle, so the GPU frees up. This is an interim setup while BLD (RTX 3090, 24 GB, 192.168.1.117) is being set up; keep model names identical to BLD so switching is a one-line config change. **BLD becomes the primary host after cutover**; the 5090 PC then only browses the Control Room. The step-by-step move is in [`docs/runbook-bld.md`](docs/runbook-bld.md). Studio agents still run on Claude for now. Routing roles to local models is a later step (see `docs/local-llm-roadmap.md`).
 
 ## Control Room dashboard
 
