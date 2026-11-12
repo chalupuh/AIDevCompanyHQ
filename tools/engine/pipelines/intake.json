@@ -1,0 +1,44 @@
+{
+  "description": "Feedback intake for an external app repo: import an in-app /feedback export into {{workdir}}/docs/intake/{{project}}/raw/ → Hana (product-manager, Intake mode) triages each new item into an intake file + queue.md (checked by check-intake.js) → architect (Opus) reviews work orders of route:full items → owner gate: mark items approved/rejected in queue.md. Approved items then run with the Start command in their intake file (quick-fix / app-build). Vars: workdir (app checkout), project (slug), export (.txt paste or .json).",
+  "required": [
+    "workdir",
+    "project",
+    "export"
+  ],
+  "defaults": {},
+  "stages": [
+    {
+      "id": "import",
+      "type": "script",
+      "run": "node \"{{soft}}/tools/intake/import-feedback.js\" \"{{export}}\" --project {{project}} --out \"{{workdir}}/docs/intake/{{project}}/raw/\""
+    },
+    {
+      "id": "triage",
+      "type": "agent",
+      "agent": "product-manager",
+      "tier": "local",
+      "maxTurns": 40,
+      "task": "Use 'Intake mode' from your agent file. Process every file in {{workdir}}/docs/intake/{{project}}/raw/ that has no intake file yet: write one intake file per item in {{workdir}}/docs/intake/{{project}}/ (<id>-<slug>.md), then write or update {{workdir}}/docs/intake/{{project}}/queue.md listing every item with its route and status. Do not touch items that already have an intake file.",
+      "expect": [
+        "{{workdir}}/docs/intake/{{project}}/queue.md"
+      ],
+      "check": "node -e \"const fs=require('fs'),p=require('path'),d='{{workdir}}/docs/intake/{{project}}';const f=fs.readdirSync(d).filter(n=>n.endsWith('.md')&&n!=='queue.md').map(n=>p.join(d,n));if(!f.length)process.exit(1);const r=require('child_process').spawnSync('node',['{{soft}}/tools/intake/check-intake.js',...f],{stdio:'inherit'});process.exit(r.status===0?0:1)\""
+    },
+    {
+      "id": "plan-check",
+      "type": "agent",
+      "agent": "architect",
+      "tier": "opus",
+      "maxTurns": 25,
+      "task": "Only for items with 'route: full' in {{workdir}}/docs/intake/{{project}}/*.md (skip queue.md and raw/): review the work order for task order and parallel-task file conflicts, and edit the intake file in place to fix them. If there are no route: full items, change nothing."
+    },
+    {
+      "id": "approve-queue",
+      "type": "gate",
+      "title": "{{project}}: Owner: mark items approved/rejected in queue.md (or reply in chat).",
+      "show": [
+        "{{workdir}}/docs/intake/{{project}}/queue.md"
+      ]
+    }
+  ]
+}

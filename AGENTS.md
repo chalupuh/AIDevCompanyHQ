@@ -45,15 +45,19 @@ The owner does not approve routine merges. **Internal PRs** (AIDevCompanyHQ, Stu
 Pipelines run through `tools/engine/engine.js`, not through this chat session. The engine runs each stage as a headless Claude Code run using the role's agent file: **local models** (`qwen3.6:27b` via Ollama) for worker stages and **Claude Opus** for gate reviews (design, milestone code review, R&D calibration). Milestone code-review gates also run a parallel **Codex** reviewer — both Opus and Codex must not REJECT (`docs/adr/0004-codex-tier.md`). Success is decided by file and test checks, never by the model's own claim. Failed stages climb the ladder (local → local retry → **Codex** → Sonnet → **blocked** → owner); Codex rate/usage limits fall through to Sonnet without counting as a failure (`docs/adr/0004-codex-tier.md`).
 
 ```
-node tools/engine/engine.js pipelines                         # rd-cycle, lite-build, smoke
+node tools/engine/engine.js pipelines                         # rd-cycle, lite-build, app-build, intake, quick-fix, smoke
 node tools/engine/engine.js start rd-cycle --var theme="health habits"
 node tools/engine/engine.js start lite-build --var slug=water-tracker --var idea=docs/research/ideas/water-tracker-ad-free.md
+node tools/engine/engine.js start intake --var workdir=<app repo> --var project=<slug> --var export=<feedback export>   # import + triage feature requests/bugs
+node tools/engine/engine.js start quick-fix --var workdir=<app repo> --var slug=<slug> --var idea=<intake file>   # small fix, PR labelled owner-review (quick-fix-internal, plus --var repo=<owner/name>, for HQ/StudioControlRoom: auto-merge per policy)
 node tools/engine/engine.js status [runId]
 node tools/engine/engine.js approve <runId> approve|reject "<note>"   # owner gates
 node tools/engine/engine.js resume <runId>                    # after un-pausing or fixing a block
 ```
 
 **The main Claude session is the supervisor:** it starts runs (in the background), relays owner gates, and helps with **blocked** runs. It does not do the stages' work itself. Never approve an owner gate on the owner's behalf, except for the `smoke` self-test. Pipelines can take a long time, so always start them with `run_in_background`.
+
+**Intake:** feature requests/bugs: export from the app's /feedback, then `engine.js start intake --var workdir=… --var project=… --var export=…`; Hana triages into `docs/intake/<project>/` and the owner approves items in `queue.md`. Approved items run with the Start command in their intake file.
 
 Legacy (manual) flows below still describe *what* each stage does. The engine pipelines encode them.
 
@@ -143,9 +147,9 @@ Write checkpoints a stranger could resume from: name the task from design.md or 
 
 Checkpoints are also good for ending a session cleanly, not just for stopping in an emergency.
 
-## Local models on this PC
+## Hosts
 
-Ollama runs on this PC (RTX 5090, 32 GB) at `127.0.0.1:11434`. Models unload after 5 minutes idle, so the GPU frees up. This is an interim setup while BLD is being repaired; keep model names identical to BLD so switching back is a one-line config change. Studio agents still run on Claude for now. Routing roles to local models is a later step (see `docs/local-llm-roadmap.md`).
+Ollama runs on this PC (RTX 5090, 32 GB) at `127.0.0.1:11434`. Models unload after 5 minutes idle, so the GPU frees up. This is an interim setup while BLD (RTX 3090, 24 GB, 192.168.1.117) is being set up; keep model names identical to BLD so switching is a one-line config change. **BLD becomes the primary host after cutover**; the 5090 PC then only browses the Control Room. The step-by-step move is in [`docs/runbook-bld.md`](docs/runbook-bld.md). Studio agents still run on Claude for now. Routing roles to local models is a later step (see `docs/local-llm-roadmap.md`).
 
 ## Control Room dashboard
 
