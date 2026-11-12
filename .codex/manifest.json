@@ -1,0 +1,20 @@
+{
+  "agents": [
+    "architect",
+    "backend-dev",
+    "code-reviewer",
+    "copy-voice",
+    "creative-director",
+    "devops-engineer",
+    "frontend-dev",
+    "image-artist",
+    "market-researcher",
+    "mobile-dev",
+    "opportunity-analyst",
+    "product-manager",
+    "qa-engineer",
+    "rd-manager",
+    "ui-ux-designer",
+    "video-producer"
+  ]
+}
