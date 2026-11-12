@@ -73,6 +73,34 @@
       ]
     },
     {
+      "id": "sprint-rework",
+      "type": "agent",
+      "agent": "backend-dev",
+      "tier": "local",
+      "maxTurns": 60,
+      "reworkMaxTurns": 30,
+      "timeoutMin": 60,
+      "mustChange": true,
+      "onlyOnRework": true,
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "Bash(npm *)",
+        "Bash(npx *)",
+        "Bash(node *)",
+        "Bash(git diff*)",
+        "Bash(git status*)"
+      ],
+      "task": "Sprint {{sprint}} rework (only runs after the sprint review asked for changes). You own EVERY finding in the review report across ALL sprint tasks, not just one task: the tasks are listed in {{backlog}} and {{home}}/docs/internal/sprint-log.md. Fix each finding in the files it names, whichever task introduced it, then append a short '## Sprint {{sprint}} Rework' entry to {{home}}/docs/internal/sprint-log.md.",
+      "expect": [
+        "docs/internal/sprint-log.md"
+      ],
+      "check": "npm --prefix studio/app run build"
+    },
+    {
       "id": "review",
       "type": "agent",
       "agent": "code-reviewer",
@@ -88,7 +116,7 @@
       ],
       "task": "Review the whole internal sprint: every unchecked task in {{backlog}}, {{home}}/docs/internal/sprint-log.md and {{home}}/docs/internal/qa/*.md. Read the changed files. Write {{home}}/docs/internal/review-sprint{{sprint}}.md with findings (Blocker / Should fix / Nit, file:line, fix) and end with 'APPROVE' or 'REQUEST CHANGES'.",
       "rework": {
-        "to": "build",
+        "to": "sprint-rework",
         "verdict": "docs/internal/review-sprint{{sprint}}.md",
         "failRegex": "REQUEST CHANGES[\\s*_`]*$",
         "max": 3
