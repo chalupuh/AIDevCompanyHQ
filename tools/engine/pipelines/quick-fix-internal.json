@@ -86,7 +86,7 @@
     {
       "id": "pr",
       "type": "script",
-      "run": "git add -A && git commit -m \"fix: {{slug}}\" && git push -u origin studio/{{slug}} && gh pr create --repo {{repo}} --fill && node -e \"const cp=require('child_process');const n=cp.execFileSync('gh',['pr','view','--repo','{{repo}}','--json','number','-q','.number'],{encoding:'utf8'}).trim();process.exit(cp.spawnSync('node',['{{home}}/tools/ci/merge-pr.js','{{repo}}',n,'--wait'],{stdio:'inherit'}).status===0?0:1)\""
+      "run": "git add -A && git commit -m \"fix: {{slug}}\" && git push -u origin studio/{{slug}} && gh pr create --repo {{repo}} --fill && node -e \"const cp=require('child_process');const n=cp.execFileSync('gh',['pr','view','studio/{{slug}}','--repo','{{repo}}','--json','number','-q','.number'],{encoding:'utf8'}).trim();process.exit(cp.spawnSync('node',['{{home}}/tools/ci/merge-pr.js','{{repo}}',n,'--wait'],{stdio:'inherit'}).status===0?0:1)\""
     }
   ]
 }
