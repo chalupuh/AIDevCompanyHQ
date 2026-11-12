@@ -25,6 +25,6 @@ Tasks (at most ~6 in total), each with: role, inputs, outputs (file paths), depe
 Checkpoint per milestone: studio.js log at 25/50/75/100%, then QA -> review gate. List owner gates. -->
 
 ## Start command
-<!-- e.g. node tools/engine/engine.js start lite-build --var slug=<slug> --var idea=docs/intake/<project>/<file>.md -->
+<!-- e.g. node tools/engine/engine.js start app-build (external) or lite-build (internal) --var slug=<slug> --var idea=docs/intake/<project>/<id>-<slug>.md -->
 
 ## Open questions for the owner

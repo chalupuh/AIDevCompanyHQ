@@ -18,7 +18,7 @@
       "agent": "product-manager",
       "tier": "local",
       "maxTurns": 40,
-      "task": "Use 'Intake mode' from your agent file. Process every file in {{workdir}}/docs/intake/{{project}}/raw/ that has no intake file yet: write one intake file per item in {{workdir}}/docs/intake/{{project}}/ (<id>.md), then write or update {{workdir}}/docs/intake/{{project}}/queue.md listing every item with its route and status. Do not touch items that already have an intake file.",
+      "task": "Use 'Intake mode' from your agent file. Process every file in {{workdir}}/docs/intake/{{project}}/raw/ that has no intake file yet: write one intake file per item in {{workdir}}/docs/intake/{{project}}/ (<id>-<slug>.md), then write or update {{workdir}}/docs/intake/{{project}}/queue.md listing every item with its route and status. Do not touch items that already have an intake file.",
       "expect": [
         "{{workdir}}/docs/intake/{{project}}/queue.md"
       ],

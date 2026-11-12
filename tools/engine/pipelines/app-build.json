@@ -1,5 +1,5 @@
 {
-  "description": "External-app build (lite track) for a repo outside HQ (e.g. A l Oreille): branch studio/{{slug}} from origin/main in {{workdir}} → spec+UX (local, written into the app repo docs/specs) → design (Opus) → owner gate → per milestone: build (local, agent from design.md Team: line) → QA (local; checks: npm run typecheck && npm test && npm run lint:baseline) → review (Opus) → push + open PR labelled owner-review (no merge stage) → owner ship gate: review and merge the PR, then publish via Sites. Specs live in the app repo. Vars: workdir (app checkout), slug, idea (intake file).",
+  "description": "External-app build (lite track) for a repo outside HQ (e.g. A l Oreille): branch studio/{{slug}} from origin/main in {{workdir}} → spec+UX (local, written into the app repo docs/specs) → design (Opus) → owner gate → per milestone: build (local, agent from design.md Team: line) → QA (local; checks: npm run typecheck && npm test && npm run lint:baseline) → review (Opus) → push + open PR labelled owner-review (no merge stage) → owner ship gate: review and merge the PR, then publish via Sites. Specs live in the app repo. Vars: workdir (app checkout), slug, idea (intake file, path relative to workdir).",
   "required": [
     "slug",
     "idea",
@@ -10,7 +10,7 @@
     {
       "id": "branch",
       "type": "script",
-      "run": "git fetch origin && git switch -c studio/{{slug}} origin/main"
+      "run": "git fetch origin && git switch -c studio/{{slug}} origin/main || (echo branch switch failed - does studio/{{slug}} already exist? delete it or use a new slug && exit 1)"
     },
     {
       "id": "spec",
@@ -18,7 +18,7 @@
       "agent": "product-manager",
       "tier": "local",
       "maxTurns": 25,
-      "task": "Lite track. Write {{workdir}}/docs/specs/{{slug}}.md (spec + UX section) from the idea file {{idea}}.",
+      "task": "Lite track. Write {{workdir}}/docs/specs/{{slug}}.md (spec + UX section) from the idea file {{workdir}}/{{idea}}.",
       "expect": [
         "{{workdir}}/docs/specs/{{slug}}.md"
       ]
@@ -104,7 +104,7 @@
     {
       "id": "pr",
       "type": "script",
-      "run": "git push -u origin studio/{{slug}} && gh pr create --label owner-review --fill"
+      "run": "node -e \"const c=require('child_process');const r=(a)=>c.spawnSync('git',a,{stdio:'inherit'});r(['add','docs/specs']);if(r(['diff','--cached','--quiet']).status!==0&&r(['commit','-m','docs: {{slug}} spec and reviews']).status!==0)process.exit(1)\" && git push -u origin studio/{{slug}} && gh pr create --base main --label owner-review --fill"
     },
     {
       "id": "ship-gate",

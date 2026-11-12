@@ -1,5 +1,5 @@
 {
-  "description": "Quick fix for an INTERNAL repo (HQ or StudioControlRoom; app repos use quick-fix): branch studio/{{slug}} from origin/main → build (local, agent from the Team: line of the intake file) → QA (local) → review (Opus + Codex) → PR, auto-merged per policy with merge-pr.js. Vars: workdir (checkout), slug, idea (intake file), repo (owner/name).",
+  "description": "Quick fix for an INTERNAL repo (HQ or StudioControlRoom; app repos use quick-fix): branch studio/{{slug}} from origin/main → build (local, agent from the Team: line of the intake file) → QA (local) → review (Opus + Codex) → PR, auto-merged per policy with merge-pr.js. Vars: workdir (checkout), slug, idea (intake file, path relative to workdir), repo (owner/name).",
   "required": [
     "workdir",
     "slug",
@@ -16,17 +16,17 @@
     {
       "id": "branch",
       "type": "script",
-      "run": "git fetch origin && git switch -c studio/{{slug}} origin/main"
+      "run": "git fetch origin && git switch -c studio/{{slug}} origin/main || (echo branch switch failed - does studio/{{slug}} already exist? delete it or use a new slug && exit 1)"
     },
     {
       "id": "build",
       "type": "agent",
       "agent": "__team_lead__",
-      "designDoc": "{{idea}}",
+      "designDoc": "{{workdir}}/{{idea}}",
       "tier": "local",
       "maxTurns": 40,
       "timeoutMin": 45,
-      "task": "Quick fix. Implement exactly what the intake file {{idea}} asks for (only that, small and focused), using the Team role named in it; follow its rules. Run the repo's checks before finishing.",
+      "task": "Quick fix. Implement exactly what the intake file {{workdir}}/{{idea}} asks for (only that, small and focused), using the Team role named in it; follow its rules. Run the repo's checks before finishing.",
       "check": "node -e \"const fs=require('fs'),cp=require('child_process');const s=fs.existsSync('engine/test.js')?['engine/test.js']:['tools/ci/check-config.js'];process.exit(cp.spawnSync('node',s,{stdio:'inherit'}).status===0?0:1)\""
     },
     {
@@ -35,7 +35,7 @@
       "agent": "qa-engineer",
       "tier": "local",
       "maxTurns": 30,
-      "task": "QA the quick fix {{slug}}: check the change against the acceptance criteria in {{idea}}. Follow your 'Pipeline runs' protocol (report file first). Write {{workdir}}/docs/quick-fix/{{slug}}.qa.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL'.",
+      "task": "QA the quick fix {{slug}}: check the change against the acceptance criteria in {{workdir}}/{{idea}}. Follow your 'Pipeline runs' protocol (report file first). Write {{workdir}}/docs/quick-fix/{{slug}}.qa.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL'.",
       "rework": {
         "to": "build",
         "verdict": "{{workdir}}/docs/quick-fix/{{slug}}.qa.md",
@@ -53,7 +53,7 @@
       "agent": "code-reviewer",
       "tier": "opus",
       "maxTurns": 60,
-      "task": "Review the whole diff of branch studio/{{slug}} against origin/main in {{workdir}} for the fix described in {{idea}}. Write {{workdir}}/docs/quick-fix/{{slug}}.review.md ending with 'APPROVE' or 'REQUEST CHANGES'.",
+      "task": "Review the whole diff of branch studio/{{slug}} against origin/main in {{workdir}} for the fix described in {{workdir}}/{{idea}}. Write {{workdir}}/docs/quick-fix/{{slug}}.review.md ending with 'APPROVE' or 'REQUEST CHANGES'.",
       "rework": {
         "to": "build",
         "verdict": "{{workdir}}/docs/quick-fix/{{slug}}.review.md",
@@ -71,7 +71,7 @@
       "agent": "code-reviewer",
       "tier": "codex",
       "maxTurns": 60,
-      "task": "Review the whole diff of branch studio/{{slug}} against origin/main in {{workdir}} for the fix described in {{idea}}. Write {{workdir}}/docs/quick-fix/{{slug}}.review-codex.md ending with 'APPROVE' or 'REQUEST CHANGES'.",
+      "task": "Review the whole diff of branch studio/{{slug}} against origin/main in {{workdir}} for the fix described in {{workdir}}/{{idea}}. Write {{workdir}}/docs/quick-fix/{{slug}}.review-codex.md ending with 'APPROVE' or 'REQUEST CHANGES'.",
       "rework": {
         "to": "build",
         "verdict": "{{workdir}}/docs/quick-fix/{{slug}}.review-codex.md",
@@ -86,7 +86,7 @@
     {
       "id": "pr",
       "type": "script",
-      "run": "git add -A && git commit -m \"fix: {{slug}}\" && git push -u origin studio/{{slug}} && gh pr create --repo {{repo}} --fill && node -e \"const cp=require('child_process');const n=cp.execFileSync('gh',['pr','view','studio/{{slug}}','--repo','{{repo}}','--json','number','-q','.number'],{encoding:'utf8'}).trim();process.exit(cp.spawnSync('node',['{{home}}/tools/ci/merge-pr.js','{{repo}}',n,'--wait'],{stdio:'inherit'}).status===0?0:1)\""
+      "run": "git add -A -- . \":(exclude)docs/intake\" && git commit -m \"fix: {{slug}}\" && git push -u origin studio/{{slug}} && gh pr create --base main --repo {{repo}} --fill && node -e \"const cp=require('child_process');const n=cp.execFileSync('gh',['pr','view','studio/{{slug}}','--repo','{{repo}}','--json','number','-q','.number'],{encoding:'utf8'}).trim();process.exit(cp.spawnSync('node',['{{home}}/tools/ci/merge-pr.js','{{repo}}',n,'--wait'],{stdio:'inherit'}).status===0?0:1)\""
     }
   ]
 }
