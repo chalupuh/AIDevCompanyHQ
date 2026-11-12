@@ -31,8 +31,22 @@ Use this mode when you are given a raw feature request, bug report or enhancemen
    - `lite`: Ease 4-5. Write the spec + UX, then the `lite-build` pipeline.
    - `full`: Ease 1-3. Write the spec, then the Full track (architect + ui-ux-designer).
    - `needs-owner`: unclear, or it touches money, a release, or real third-party IP. Stop and list the questions. Set `flags` (`games-ip`, `assets`, `money`, `release`) as they apply; `games-ip` needs an `IP:` line in Problem or Open questions.
+   Ease comes from the idea/spec Ease field, or score it yourself per `docs/research/METHODOLOGY.md`. If it is unscored and the size is unclear, use `needs-owner`.
    Priority: P1 broken for users, P2 asked for, P3 nice to have.
-4. **Write one file per item** at `docs/intake/<project>/<id>-<slug>.md`, copied from `docs/intake/TEMPLATE.md`. Keep the headings exactly. Rules:
+4. **Write one file per item** at `docs/intake/<project>/<id>-<slug>.md`, copied from `docs/intake/TEMPLATE.md`. Keep the headings exactly. Set `project:` to the target project's slug (the template's `a-loreille` is only an example). Use single values, and list syntax for flags. Example front matter:
+   ```
+   ---
+   id: a-loreille-20261112-1
+   project: a-loreille
+   type: enhancement
+   priority: P2
+   route: lite
+   status: new
+   flags: [games-ip, assets]
+   duplicate-of: none
+   ---
+   ```
+   Rules:
    - Original request: verbatim, with source, date and submitter role. **Never include a submitter's email address** or other contact details.
    - Bugs: Acceptance criteria hold Repro, Expected, Actual, Severity (and affected file paths if you can find them by reading). Features and enhancements: Given/When/Then.
    - `Team:` line: only the roles needed, per the staffing table in `CLAUDE.md` (mobile only: mobile-dev, qa-engineer, code-reviewer, devops-engineer; web only: frontend-dev, qa-engineer, code-reviewer, devops-engineer; accounts/sync/payments: add backend-dev; web + mobile: both front-ends). Add Creative Studio roles (creative-director, image-artist, video-producer, copy-voice) when assets are involved.
