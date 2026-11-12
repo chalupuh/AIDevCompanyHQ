@@ -43,6 +43,10 @@ Run R&D cycles and builds here. Tune the agent prompts and scoring weights until
 - Budget and rate limits on Claude calls; local-model fallbacks.
 - Metrics: ideas proposed vs approved, build-loop counts, QA pass rates per model. Use them to decide which roles can move to local models safely.
 
+## Moving to BLD
+
+The first always-on host is BLD (Windows, RTX 3090 24 GB). The full move-over, with checks, calibration, cutover and rollback, is in [`runbook-bld.md`](runbook-bld.md). After cutover BLD is the primary host and the 5090 PC only browses the Control Room.
+
 ## Decisions for later (owner)
 
 - Hardware budget, which sets the size of local model you can run
