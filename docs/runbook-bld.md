@@ -138,8 +138,8 @@ If it fails: `authentication failed` → redo 1.4. `destination path already exi
 ```powershell
 git -C C:\Users\goldg\StudioControlRoom checkout main
 git -C C:\Users\goldg\StudioControlRoom pull --ff-only
-git -C C:\Users\goldg\AI Development Company checkout main
-git -C C:\Users\goldg\AI Development Company pull --ff-only
+git -C "C:\Users\goldg\AI Development Company" checkout main
+git -C "C:\Users\goldg\AI Development Company" pull --ff-only
 Test-Path C:\Users\goldg\StudioControlRoom\studio\machine.js
 Test-Path C:\Users\goldg\StudioControlRoom\studio\supervisor.js
 Test-Path C:\Users\goldg\StudioControlRoom\studio\install-service.ps1
@@ -187,7 +187,7 @@ Runtime state lives in `HQ\.studio` and is not in git. Copy it **with the studio
 ### 3.1 Pause the studio [5090]
 
 ```powershell
-cd C:\Users\goldg\AI Development Company
+cd "C:\Users\goldg\AI Development Company"
 node .studio\studio.js pause
 node .studio\studio.js status
 ```
@@ -225,7 +225,7 @@ Choose **one** method. Method A uses an SMB share on BLD; method B needs nothing
 
 ```powershell
 # [BLD]
-New-Item -ItemType Directory -Force C:\Users\goldg\AI Development Company\.studio | Out-Null
+New-Item -ItemType Directory -Force "C:\Users\goldg\AI Development Company\.studio" | Out-Null
 net share StudioState="C:\Users\goldg\AI Development Company\.studio" /GRANT:goldg,CHANGE
 ```
 
@@ -254,10 +254,16 @@ Expected: each robocopy ends with `Failed : 0`, share delete prints `"StudioStat
 # [5090]
 $src = 'C:\Users\goldg\AI Development Company\.studio'
 $bld = 'goldg@192.168.1.117'
-ssh $bld "powershell -Command New-Item -ItemType Directory -Force C:\Users\goldg\AI Development Company\.studio"
-scp -r "$src\runs" "$src\checkpoints" "$src\portraits" "${bld}:'C:/Users/goldg/AI Development Company/.studio/'"
-scp "$src\roster.json" "$src\control.json" "$src\events.jsonl" "${bld}:'C:/Users/goldg/AI Development Company/.studio/'"
+$cmd = "New-Item -ItemType Directory -Force 'C:\Users\goldg\AI Development Company\.studio' | Out-Null"
+$enc = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($cmd))
+ssh $bld "powershell -NoProfile -EncodedCommand $enc"
+# Test with one small file first (default SFTP mode: no inner quotes around the remote path)
+scp "$src\control.json" "${bld}:C:/Users/goldg/AI Development Company/.studio/"
+scp -r "$src\runs" "$src\checkpoints" "$src\portraits" "${bld}:C:/Users/goldg/AI Development Company/.studio/"
+scp "$src\roster.json" "$src\events.jsonl" "${bld}:C:/Users/goldg/AI Development Company/.studio/"
 ```
+
+If `scp` reports `No such file or directory`, your client may be in legacy mode; retry with `scp -O` and single quotes around the remote path (`"${bld}:'C:/Users/goldg/AI Development Company/.studio/'"`).
 
 Expected (method A): each robocopy ends with a summary table and `Failed : 0`, and the exit code is 0–7 (robocopy codes 0–7 are success; 8 or more is failure). Method B: scp prints each file with 100%.
 
@@ -266,7 +272,7 @@ If it fails: `System error 53` or `1219` on `net use` → SMB is blocked or cred
 ### 3.4 Verify the copy [BLD]
 
 ```powershell
-cd C:\Users\goldg\AI Development Company\.studio
+cd "C:\Users\goldg\AI Development Company\.studio"
 (Get-ChildItem runs -Recurse -File | Measure-Object).Count
 Get-ChildItem checkpoints -ErrorAction SilentlyContinue | Measure-Object | Select-Object Count
 Test-Path roster.json, events.jsonl
@@ -281,9 +287,9 @@ If it fails: counts differ → rerun the copy. A `True` for `machine.json`, `aut
 
 ```powershell
 # [BLD]
-cd C:\Users\goldg\AI Development Company\.studio
+cd "C:\Users\goldg\AI Development Company\.studio"
 Remove-Item -Recurse -Force -Path runs, checkpoints -ErrorAction SilentlyContinue
-cd C:\Users\goldg\AI Development Company
+cd "C:\Users\goldg\AI Development Company"
 node .studio\studio.js pause
 node .studio\studio.js status
 ```
@@ -295,6 +301,7 @@ Expected: `status` shows the switch as **Paused**, and `(Get-ChildItem runs -Err
 The trial copy is done. Keep the 5090 as the primary until section 9:
 
 ```powershell
+cd "C:\Users\goldg\AI Development Company"
 node .studio\studio.js resume
 node .studio\studio.js status
 ```
@@ -320,7 +327,7 @@ Write the BLD profile (adjust `gitBash` if you recorded a different path in 1.3)
 $m = Get-Content studio\machine.example.json -Raw | ConvertFrom-Json
 $json = $m.profiles.'bld-3090' | ConvertTo-Json -Depth 8
 [IO.File]::WriteAllText('C:\Users\goldg\AI Development Company\.studio\machine.json', $json, (New-Object Text.UTF8Encoding $false))
-Get-Content C:\Users\goldg\AI Development Company\.studio\machine.json
+Get-Content -Raw "C:\Users\goldg\AI Development Company\.studio\machine.json"
 ```
 
 Expected fields, with these values (shape from `studio/machine.js`):
@@ -427,7 +434,7 @@ If it fails: Ollama does not come back → start it from the Start menu and chec
 ### 6.3 Smoke pipeline
 
 ```powershell
-cd C:\Users\goldg\AI Development Company
+cd "C:\Users\goldg\AI Development Company"
 node tools\engine\engine.js start smoke
 node tools\engine\engine.js status
 ```
@@ -477,7 +484,7 @@ $env:STUDIO_BIND = '0.0.0.0'
 Start the Control Room and check it is reachable from the LAN address:
 
 ```powershell
-cd C:\Users\goldg\AI Development Company
+cd "C:\Users\goldg\AI Development Company"
 node .studio\studio.js serve
 # in a second terminal:
 netstat -ano | Select-String ':4777'
@@ -528,7 +535,7 @@ $outFile = "$env:TEMP\s4u-cred-check.txt"
 Remove-Item $outFile -ErrorAction SilentlyContinue
 $hqPath = "C:\Users\goldg\AI Development Company"
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
-    -Argument "-NoProfile -Command gh auth status *>> `"$outFile`"; gh api user --jq .login *>> `"$outFile`"; git -C `"`"$hqPath`"`" push --dry-run origin HEAD:refs/heads/s4u-credcheck *>> `"$outFile`""
+    -Argument "-NoProfile -Command gh auth status *>> '$outFile'; gh api user --jq .login *>> '$outFile'; git -C '$hqPath' push --dry-run origin HEAD:refs/heads/s4u-credcheck *>> '$outFile'"
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType S4U -RunLevel Highest
 Register-ScheduledTask -TaskName CredentialCheck -Action $action -Principal $principal -Force
 Start-ScheduledTask -TaskName CredentialCheck
@@ -546,7 +553,7 @@ If `gh auth status` fails from the task context, `git push` and `gh pr create` f
 ```powershell
 node studio\studio.js supervise
 Start-Sleep 10
-Get-Content C:\Users\goldg\AI Development Company\.studio\logs\supervisor.log -Tail 10
+Get-Content "C:\Users\goldg\AI Development Company\.studio\logs\supervisor.log" -Tail 10
 ```
 
 Expected: the log shows supervisor ticks, Ollama and the Control Room kept alive. Stop the manual supervise with `Ctrl+C` — note that `Ctrl+C` stops only the supervisor process; the Control Room and Ollama it started via `power.startup` keep running until you log off or stop them manually. To remove the scheduled task later: `install-service.ps1 -Uninstall`.
@@ -600,7 +607,7 @@ Only the owner starts this section. It makes BLD the primary host. Allow about 3
 ### 9.1 Pause the 5090 [5090]
 
 ```powershell
-cd C:\Users\goldg\AI Development Company
+cd "C:\Users\goldg\AI Development Company"
 node .studio\studio.js pause
 node .studio\studio.js status
 node tools\engine\engine.js status
@@ -637,7 +644,7 @@ Expected: no node process on the 5090 runs `studio.js` or `engine.js`.
 
 ```powershell
 Stop-ScheduledTask -TaskName StudioSupervisor
-cd C:\Users\goldg\AI Development Company
+cd "C:\Users\goldg\AI Development Company"
 node .studio\studio.js status   # must show Paused
 ```
 
@@ -659,8 +666,8 @@ Repeat section 3.3 (the same method) from the 5090 to BLD. For a final copy remo
 
 ```powershell
 # [BLD]  — confirm BLD's own config is intact
-(Get-Content C:\Users\goldg\AI Development Company\.studio\machine.json | ConvertFrom-Json).name
-Test-Path C:\Users\goldg\AI Development Company\.studio\auth.json
+(Get-Content -Raw "C:\Users\goldg\AI Development Company\.studio\machine.json" | ConvertFrom-Json).name
+Test-Path "C:\Users\goldg\AI Development Company\.studio\auth.json"
 ```
 
 Expected: `bld-3090` and `True`.
@@ -671,9 +678,11 @@ Also verify that carried-over run records point at BLD's correct HQ path (they w
 
 ```powershell
 # [BLD]  — check one carried-over run record
-$runFile = Get-ChildItem C:\Users\goldg\AI Development Company\.studio\runs\*.json | Select-Object -First 1
-if ($runFile) {
-    (Get-Content $runFile | ConvertFrom-Json).vars.home
+$runFiles = Get-ChildItem "C:\Users\goldg\AI Development Company\.studio\runs\*.json"
+if ($runFiles) {
+    foreach ($r in $runFiles) {
+        "{0}: {1}" -f $r.Name, ((Get-Content -Raw $r.FullName | ConvertFrom-Json).vars.home)
+    }
 } else {
     Write-Host "No run records found (expected if no runs were carried over)"
 }
@@ -689,7 +698,7 @@ If a run record shows a different path: all stages for that run will fail their 
 
 ```powershell
 # [BLD]
-cd C:\Users\goldg\AI Development Company
+cd "C:\Users\goldg\AI Development Company"
 node .studio\studio.js status   # must show Paused
 ```
 
@@ -750,7 +759,7 @@ Use this if BLD cannot do the work. The 5090 state stays intact until you delete
 
 ```powershell
 # [BLD]
-cd C:\Users\goldg\AI Development Company
+cd "C:\Users\goldg\AI Development Company"
 node .studio\studio.js pause
 Stop-ScheduledTask -TaskName StudioSupervisor
 node tools\engine\engine.js status
@@ -766,7 +775,7 @@ Reverse the direction of section 3.3: robocopy or scp from BLD's `.studio` (`run
 
 ```powershell
 # [5090]
-Expand-Archive -Force <path to the 9.2 zip> -DestinationPath C:\Users\goldg\AI Development Company\.studio\restore
+Expand-Archive -Force <path to the 9.2 zip> -DestinationPath "C:\Users\goldg\AI Development Company\.studio\restore"
 ```
 
 Then copy the wanted folders from `restore` into `.studio` by hand.
@@ -775,7 +784,7 @@ Then copy the wanted folders from `restore` into `.studio` by hand.
 
 ```powershell
 # [5090]
-cd C:\Users\goldg\AI Development Company
+cd "C:\Users\goldg\AI Development Company"
 Remove-Item -Recurse -Force .studio\locks -ErrorAction SilentlyContinue
 node .studio\studio.js resume
 node .studio\studio.js status

@@ -57,6 +57,7 @@ if ($nvidiaOnPath) {
     Write-Host ("  [PASS] nvidia-smi on PATH")
     try {
         $csv = nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader 2>$null | Select-Object -First 1
+        $csvExit = $LASTEXITCODE
         $smiLines = nvidia-smi 2>$null
         $smiFull  = $smiLines -join "`n"
     } catch {
@@ -70,12 +71,15 @@ if ($nvidiaOnPath) {
     # Parse GPU name / VRAM / driver from --query-gpu output
     # ---------------------------------------------------------------------------
     $gpuName = $gpuVram = $gpuDriver = ''
-    if ($csv) {
-        $lastComma  = $csv.LastIndexOf(',')
-        $prevComma  = $csv.LastIndexOf(',', $lastComma - 1)
-        $gpuName    = $csv.Substring(0, $prevComma).Trim()
-        $gpuVram    = $csv.Substring($prevComma + 1, $lastComma - $prevComma - 1).Trim()
-        $gpuDriver  = $csv.Substring($lastComma + 1).Trim()
+    # Guard: a broken driver prints a message with no commas (and a non-zero exit code).
+    $parts = @()
+    if ($csv -and $csvExit -eq 0) { $parts = @("$csv" -split ',') }
+    if ($parts.Count -ge 3) {
+        $gpuDriver = $parts[-1].Trim()
+        $gpuVram   = $parts[-2].Trim()
+        $gpuName   = (($parts[0..($parts.Count - 3)]) -join ',').Trim()
+    } else {
+        $csv = $null
     }
 
     $cudaVer = 0
@@ -84,7 +88,7 @@ if ($nvidiaOnPath) {
     # Iterate explicitly (not Where-Object) so $Matches stays in scope.
     if ($smiLines) {
         foreach ($line in $smiLines) {
-            if ($line -match 'CUDA\s+Version:\s*([0-9]+)') {
+            if ($line -match 'CUDA\s+Version\s*:?\s*([0-9]+)') {
                 $cudaVer = [int]$Matches[1]
                 break
             }
@@ -95,7 +99,8 @@ if ($nvidiaOnPath) {
     if ($cudaVer -eq 0 -and $gpuDriver) {
         $drvMajor = 0
         if ($gpuDriver -match '^(\d+)') { $drvMajor = [int]$Matches[1] }
-        if ($drvMajor -ge 527)    { $cudaVer = 12 }
+        if ($drvMajor -ge 580)    { $cudaVer = 13 }
+        elseif ($drvMajor -ge 527) { $cudaVer = 12 }
         elseif ($drvMajor -ge 452) { $cudaVer = 11 }
         elseif ($drvMajor -ge 390) { $cudaVer = 10 }
         elseif ($drvMajor -ge 384) { $cudaVer = 9 }
@@ -162,19 +167,32 @@ $null = Check "git installed" {
 # Git Bash: test default path as a warning (runbook section 1.3 allows a custom path).
 # Also try deriving from `where.exe git` for non-default installs.
 $null = Warn "Git Bash found" {
-    $ok = Test-Path "C:\Program Files\Git\bin\bash.exe"
-    if ($ok) { $foundBashPath = "C:\Program Files\Git\bin\bash.exe" }
-    if (-not $ok) {
-        # Derive bash path from `where.exe git` -> parent/bin/bash.exe
-        $gitPath = where.exe git 2>$null | Select-Object -First 1
-        if ($gitPath) {
-            $bashPath = Join-Path (Split-Path (Split-Path $gitPath) ) "bin\bash.exe"
-            $ok = Test-Path $bashPath
-            if ($ok) { $foundBashPath = $bashPath }
-        }
+    $foundBashPath = $null
+    $candidates = @()
+    if ($env:STUDIO_GIT_BASH) { $candidates += $env:STUDIO_GIT_BASH }
+    $mj = Join-Path (Get-Location) ".studio\machine.json"
+    if (Test-Path $mj) {
+        try {
+            $gb = (Get-Content -Raw $mj | ConvertFrom-Json).gitBash
+            if ($gb) { $candidates += $gb }
+        } catch { }
     }
-    if ($foundBashPath) { Write-Host ("        Path   : " + $foundBashPath) }
-    $ok
+    $candidates += "C:\Program Files\Git\bin\bash.exe"
+    $gitPath = where.exe git 2>$null | Select-Object -First 1
+    if ($gitPath) {
+        $gitDir = Split-Path (Split-Path $gitPath)
+        $candidates += (Join-Path $gitDir "bin\bash.exe")
+        $candidates += (Join-Path (Split-Path $gitDir) "bin\bash.exe")
+    }
+    foreach ($c in $candidates) {
+        if ($c -and (Test-Path $c)) { $foundBashPath = $c; break }
+    }
+    if ($foundBashPath) {
+        Write-Host ("        Path   : " + $foundBashPath)
+    } else {
+        Write-Host ("        where.exe git: " + $gitPath + " (no bash.exe found; set STUDIO_GIT_BASH or gitBash in machine.json)")
+    }
+    [bool]$foundBashPath
 }
 
 $null = Check "git user.name set" {
