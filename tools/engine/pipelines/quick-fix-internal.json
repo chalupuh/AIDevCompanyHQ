@@ -9,6 +9,11 @@
   "defaults": {},
   "stages": [
     {
+      "id": "guard",
+      "type": "script",
+      "run": "node -e \"if(!['chalupuh/AIDevCompanyHQ','chalupuh/StudioControlRoom'].includes('{{repo}}')){console.error('quick-fix-internal only supports chalupuh/AIDevCompanyHQ or chalupuh/StudioControlRoom; use quick-fix for app repos');process.exit(1)}\""
+    },
+    {
       "id": "branch",
       "type": "script",
       "run": "git fetch origin && git switch -c studio/{{slug}} origin/main"
@@ -21,8 +26,8 @@
       "tier": "local",
       "maxTurns": 40,
       "timeoutMin": 45,
-      "task": "Quick fix. Implement exactly what the intake file {{idea}} asks for (only that, small and focused), using the Team role named in it; follow its rules. Run lint/typecheck/tests before finishing.",
-      "check": "npm run typecheck && npm test"
+      "task": "Quick fix. Implement exactly what the intake file {{idea}} asks for (only that, small and focused), using the Team role named in it; follow its rules. Run the repo's checks before finishing.",
+      "check": "node -e \"const fs=require('fs'),cp=require('child_process');const s=fs.existsSync('engine/test.js')?['engine/test.js']:['tools/ci/check-config.js'];process.exit(cp.spawnSync('node',s,{stdio:'inherit'}).status===0?0:1)\""
     },
     {
       "id": "qa",
@@ -34,13 +39,13 @@
       "rework": {
         "to": "build",
         "verdict": "{{workdir}}/docs/quick-fix/{{slug}}.qa.md",
-        "failRegex": "VERDICT:[s*_`]*FAIL",
+        "failRegex": "VERDICT:[\\s*_`]*FAIL",
         "max": 3
       },
       "expect": [
         "{{workdir}}/docs/quick-fix/{{slug}}.qa.md"
       ],
-      "check": "npm run typecheck && npm test && node -e \"if(!/VERDICT:[s*_`]*PASS/.test(require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.qa.md','utf8')))process.exit(1)\""
+      "check": "node -e \"const fs=require('fs'),cp=require('child_process');const s=fs.existsSync('engine/test.js')?['engine/test.js']:['tools/ci/check-config.js'];process.exit(cp.spawnSync('node',s,{stdio:'inherit'}).status===0?0:1)\" && node -e \"if(!/VERDICT:[\\s*_\\x60]*PASS/.test(require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.qa.md','utf8')))process.exit(1)\""
     },
     {
       "id": "review",
@@ -52,13 +57,13 @@
       "rework": {
         "to": "build",
         "verdict": "{{workdir}}/docs/quick-fix/{{slug}}.review.md",
-        "failRegex": "REQUEST CHANGES[s*_`]*$",
+        "failRegex": "REQUEST CHANGES[\\s*_`]*$",
         "max": 3
       },
       "expect": [
         "{{workdir}}/docs/quick-fix/{{slug}}.review.md"
       ],
-      "check": "node -e \"const l=require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.review.md','utf8').trim().split('\n').pop().replace(/[s*_`]+/g,' ').trim();if(!/\bAPPROVE$/.test(l))process.exit(1)\""
+      "check": "node -e \"const l=require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.review.md','utf8').trim().split('\\n').pop().replace(/[\\s*_\\x60]+/g,' ').trim();if(!/\\bAPPROVE$/.test(l))process.exit(1)\""
     },
     {
       "id": "review-codex",
@@ -70,18 +75,18 @@
       "rework": {
         "to": "build",
         "verdict": "{{workdir}}/docs/quick-fix/{{slug}}.review-codex.md",
-        "failRegex": "REQUEST CHANGES[s*_`]*$",
+        "failRegex": "REQUEST CHANGES[\\s*_`]*$",
         "max": 3
       },
       "expect": [
         "{{workdir}}/docs/quick-fix/{{slug}}.review-codex.md"
       ],
-      "check": "node -e \"const l=require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.review-codex.md','utf8').trim().split('\n').pop().replace(/[s*_`]+/g,' ').trim();if(!/\bAPPROVE$/.test(l))process.exit(1)\""
+      "check": "node -e \"const l=require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.review-codex.md','utf8').trim().split('\\n').pop().replace(/[\\s*_\\x60]+/g,' ').trim();if(!/\\bAPPROVE$/.test(l))process.exit(1)\""
     },
     {
       "id": "pr",
       "type": "script",
-      "run": "git add -A && git commit -m \"fix: {{slug}}\" && git push -u origin studio/{{slug}} && gh pr create --repo {{repo}} --fill && node \"{{home}}/tools/ci/merge-pr.js\" {{repo}} $(gh pr view --repo {{repo}} --json number -q .number) --wait"
+      "run": "git add -A && git commit -m \"fix: {{slug}}\" && git push -u origin studio/{{slug}} && gh pr create --repo {{repo}} --fill && node -e \"const cp=require('child_process');const n=cp.execFileSync('gh',['pr','view','--repo','{{repo}}','--json','number','-q','.number'],{encoding:'utf8'}).trim();process.exit(cp.spawnSync('node',['{{home}}/tools/ci/merge-pr.js','{{repo}}',n,'--wait'],{stdio:'inherit'}).status===0?0:1)\""
     }
   ]
 }

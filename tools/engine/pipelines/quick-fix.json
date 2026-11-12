@@ -20,7 +20,7 @@
       "tier": "local",
       "maxTurns": 40,
       "timeoutMin": 45,
-      "task": "Quick fix. Implement exactly what the intake file {{idea}} asks for (only that, small and focused), using the Team role named in it; follow its rules. Run lint/typecheck/tests before finishing.",
+      "task": "Quick fix. Implement exactly what the intake file {{idea}} asks for (only that, small and focused), using the Team role named in it; follow its rules. Run the repo's checks before finishing.",
       "check": "npm run typecheck && npm test && npm run lint:baseline"
     },
     {
@@ -33,13 +33,13 @@
       "rework": {
         "to": "build",
         "verdict": "{{workdir}}/docs/quick-fix/{{slug}}.qa.md",
-        "failRegex": "VERDICT:[s*_`]*FAIL",
+        "failRegex": "VERDICT:[\\s*_`]*FAIL",
         "max": 3
       },
       "expect": [
         "{{workdir}}/docs/quick-fix/{{slug}}.qa.md"
       ],
-      "check": "npm run typecheck && npm test && npm run lint:baseline && node -e \"if(!/VERDICT:[s*_`]*PASS/.test(require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.qa.md','utf8')))process.exit(1)\""
+      "check": "npm run typecheck && npm test && npm run lint:baseline && node -e \"if(!/VERDICT:[\\s*_\\x60]*PASS/.test(require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.qa.md','utf8')))process.exit(1)\""
     },
     {
       "id": "review",
@@ -51,13 +51,13 @@
       "rework": {
         "to": "build",
         "verdict": "{{workdir}}/docs/quick-fix/{{slug}}.review.md",
-        "failRegex": "REQUEST CHANGES[s*_`]*$",
+        "failRegex": "REQUEST CHANGES[\\s*_`]*$",
         "max": 3
       },
       "expect": [
         "{{workdir}}/docs/quick-fix/{{slug}}.review.md"
       ],
-      "check": "node -e \"const l=require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.review.md','utf8').trim().split('\n').pop().replace(/[s*_`]+/g,' ').trim();if(!/\bAPPROVE$/.test(l))process.exit(1)\""
+      "check": "node -e \"const l=require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.review.md','utf8').trim().split('\\n').pop().replace(/[\\s*_\\x60]+/g,' ').trim();if(!/\\bAPPROVE$/.test(l))process.exit(1)\""
     },
     {
       "id": "review-codex",
@@ -69,13 +69,13 @@
       "rework": {
         "to": "build",
         "verdict": "{{workdir}}/docs/quick-fix/{{slug}}.review-codex.md",
-        "failRegex": "REQUEST CHANGES[s*_`]*$",
+        "failRegex": "REQUEST CHANGES[\\s*_`]*$",
         "max": 3
       },
       "expect": [
         "{{workdir}}/docs/quick-fix/{{slug}}.review-codex.md"
       ],
-      "check": "node -e \"const l=require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.review-codex.md','utf8').trim().split('\n').pop().replace(/[s*_`]+/g,' ').trim();if(!/\bAPPROVE$/.test(l))process.exit(1)\""
+      "check": "node -e \"const l=require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.review-codex.md','utf8').trim().split('\\n').pop().replace(/[\\s*_\\x60]+/g,' ').trim();if(!/\\bAPPROVE$/.test(l))process.exit(1)\""
     },
     {
       "id": "pr",
