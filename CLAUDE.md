@@ -38,7 +38,7 @@ The owner does not approve routine merges. **Internal PRs** (AIDevCompanyHQ, Stu
 
 ## Workflow Engine: default way to run work (ADR 0001)
 
-Pipelines run through `tools/engine/engine.js`, not through this chat session. The engine runs each stage as a headless Claude Code run using the role's agent file: **local models** (`qwen3.6:27b` via Ollama) for worker stages and **Claude Opus** only for gate reviews (design, milestone code review, R&D calibration). Success is decided by file and test checks, never by the model's own claim. Failed stages climb the ladder (local → local retry → Sonnet → **blocked** → owner).
+Pipelines run through `tools/engine/engine.js`, not through this chat session. The engine runs each stage as a headless Claude Code run using the role's agent file: **local models** (`qwen3.6:27b` via Ollama) for worker stages and **Claude Opus** for gate reviews (design, milestone code review, R&D calibration). Milestone code-review gates also run a parallel **Codex** reviewer — both Opus and Codex must not REJECT (`docs/adr/0004-codex-tier.md`). Success is decided by file and test checks, never by the model's own claim. Failed stages climb the ladder (local → local retry → **Codex** → Sonnet → **blocked** → owner); Codex rate/usage limits fall through to Sonnet without counting as a failure (`docs/adr/0004-codex-tier.md`).
 
 ```
 node tools/engine/engine.js pipelines                         # rd-cycle, lite-build, smoke
@@ -170,4 +170,6 @@ This workflow is meant to move later to an always-on server running local LLMs, 
 <!-- claude-reflect: learned rules (saved from the band; edit freely) -->
 ## Learned rules
 - Create a separate GitHub repo for each individual development project using standard GitHub practices, and keep Studio control room in its own dedicated repo.
+- Ensure developers and employees use applicable local LLMs wherever possible, and keep full focus on developing HiveBoard.
+- Route most development work to local LLMs, pick Claude and ChatGPT models by task fit, and rebalance around usage limits instead of halting work.
 <!-- end claude-reflect -->
