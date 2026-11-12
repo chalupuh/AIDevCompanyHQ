@@ -1,0 +1,118 @@
+{
+  "description": "External-app build (lite track) for a repo outside HQ (e.g. A l Oreille): branch studio/{{slug}} from origin/main in {{workdir}} → spec+UX (local, written into the app repo docs/specs) → design (Opus) → owner gate → per milestone: build (local, agent from design.md Team: line) → QA (local; checks: npm run typecheck && npm test && npm run lint:baseline) → review (Opus) → push + open PR labelled owner-review (no merge stage) → owner ship gate: review and merge the PR, then publish via Sites. Specs live in the app repo. Vars: workdir (app checkout), slug, idea (intake file).",
+  "required": [
+    "slug",
+    "idea",
+    "workdir"
+  ],
+  "defaults": {},
+  "stages": [
+    {
+      "id": "branch",
+      "type": "script",
+      "run": "git fetch origin && git switch -c studio/{{slug}} origin/main"
+    },
+    {
+      "id": "spec",
+      "type": "agent",
+      "agent": "product-manager",
+      "tier": "local",
+      "maxTurns": 25,
+      "task": "Lite track. Write {{workdir}}/docs/specs/{{slug}}.md (spec + UX section) from the idea file {{idea}}.",
+      "expect": [
+        "{{workdir}}/docs/specs/{{slug}}.md"
+      ]
+    },
+    {
+      "id": "design",
+      "type": "agent",
+      "agent": "architect",
+      "tier": "opus",
+      "maxTurns": 25,
+      "task": "Lite track. Write the one-page {{workdir}}/docs/specs/{{slug}}.design.md for {{workdir}}/docs/specs/{{slug}}.md. Use headings exactly '## Milestone N: <name>' for each milestone.",
+      "expect": [
+        "{{workdir}}/docs/specs/{{slug}}.design.md"
+      ],
+      "check": "node -e \"if(!/^## Milestone \\d/m.test(require('fs').readFileSync('{{workdir}}/docs/specs/{{slug}}.design.md','utf8')))process.exit(1)\""
+    },
+    {
+      "id": "approve-plan",
+      "type": "gate",
+      "title": "{{slug}}: approve spec + design (answer open questions in the spec first)",
+      "show": [
+        "{{workdir}}/docs/specs/{{slug}}.md",
+        "{{workdir}}/docs/specs/{{slug}}.design.md"
+      ]
+    },
+    {
+      "id": "milestones",
+      "type": "foreach",
+      "items": {
+        "file": "{{workdir}}/docs/specs/{{slug}}.design.md",
+        "regex": "^## (Milestone \\d+:.*)$"
+      },
+      "stages": [
+        {
+          "id": "build",
+          "type": "agent",
+          "agent": "__team_lead__",
+          "designDoc": "{{workdir}}/docs/specs/{{slug}}.design.md",
+          "tier": "local",
+          "maxTurns": 60,
+          "timeoutMin": 60,
+          "task": "Implement '{{item}}' from {{workdir}}/docs/specs/{{slug}}.design.md (only that milestone). Use the Team role named in design.md; follow its rules. Run lint/typecheck/tests before finishing.",
+          "check": "npm run typecheck && npm test && npm run lint:baseline"
+        },
+        {
+          "id": "qa",
+          "type": "agent",
+          "agent": "qa-engineer",
+          "tier": "local",
+          "maxTurns": 45,
+          "task": "QA '{{item}}' of {{slug}}: only the tasks and 'Try it' of that milestone in {{workdir}}/docs/specs/{{slug}}.design.md, checked against the matching acceptance criteria in {{workdir}}/docs/specs/{{slug}}.md. Follow your 'Pipeline runs' protocol (report file first). Write {{workdir}}/docs/specs/{{slug}}.qa-m{{n}}.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL'.",
+          "rework": {
+            "to": "build",
+            "verdict": "{{workdir}}/docs/specs/{{slug}}.qa-m{{n}}.md",
+            "failRegex": "VERDICT:[\\s*_`]*FAIL",
+            "max": 3
+          },
+          "expect": [
+            "{{workdir}}/docs/specs/{{slug}}.qa-m{{n}}.md"
+          ],
+          "check": "npm run typecheck && npm test && npm run lint:baseline && node -e \"if(!/VERDICT:[\\s*_\\x60]*PASS/.test(require('fs').readFileSync('{{workdir}}/docs/specs/{{slug}}.qa-m{{n}}.md','utf8')))process.exit(1)\""
+        },
+        {
+          "id": "review",
+          "type": "agent",
+          "agent": "code-reviewer",
+          "tier": "opus",
+          "maxTurns": 60,
+          "task": "Review the whole diff for '{{item}}' of {{slug}}. Write {{workdir}}/docs/specs/{{slug}}.review-m{{n}}.md ending with 'APPROVE' or 'REQUEST CHANGES'.",
+          "rework": {
+            "to": "build",
+            "verdict": "{{workdir}}/docs/specs/{{slug}}.review-m{{n}}.md",
+            "failRegex": "REQUEST CHANGES[\\s*_`]*$",
+            "max": 3
+          },
+          "expect": [
+            "{{workdir}}/docs/specs/{{slug}}.review-m{{n}}.md"
+          ],
+          "check": "node -e \"const l=require('fs').readFileSync('{{workdir}}/docs/specs/{{slug}}.review-m{{n}}.md','utf8').trim().split('\\n').pop().replace(/[\\s*_\\x60]+/g,' ').trim();if(!/\\bAPPROVE$/.test(l))process.exit(1)\""
+        }
+      ]
+    },
+    {
+      "id": "pr",
+      "type": "script",
+      "run": "git push -u origin studio/{{slug}} && gh pr create --label owner-review --fill"
+    },
+    {
+      "id": "ship-gate",
+      "type": "gate",
+      "title": "{{slug}}: PR opened (label owner-review). Owner: review and merge the PR, then publish via Sites.",
+      "show": [
+        "{{workdir}}/docs/specs/{{slug}}.design.md"
+      ]
+    }
+  ]
+}
