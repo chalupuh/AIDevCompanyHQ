@@ -20,3 +20,4 @@ temp_*
 **/temp_*
 .studio/*progress*
 .studio/run_build.json
+.claude/settings.local.json

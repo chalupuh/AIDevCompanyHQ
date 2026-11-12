@@ -137,7 +137,7 @@ Both support Dynamic Type / font scaling; layouts must hold at 200% on parent sc
 | Token | Value |
 |---|---|
 | Spacing scale (pt) | `s1` 4, `s2` 8, `s3` 12, `s4` 16, `s5` 24, `s6` 32, `s7` 48, `s8` 64 |
-| Screen padding | Phone 20, tablet 40 (content max width 720, centred) |
+| Screen padding | Phone 20, tablet 40 (content centred; max width 720 for text screens, 960 kid home, 840 member board) |
 | Gutter between kid tiles | 16 (phone), 24 (tablet) |
 | Radius | `r.sm` 8 (input inner), `r.md` 16 (parent card, chip), `r.lg` 24 (kid tile), `r.xl` 32 (sheet, big tile), `r.hex` 28 (rounded-hex corner), `r.pill` 999 |
 | Kid outline | `stroke.kid` 3 pt `ink` |
@@ -207,7 +207,7 @@ Both support Dynamic Type / font scaling; layouts must hold at 200% on parent sc
 
 ## 4. Screens
 
-Conventions: wireframes are phone portrait. `[ ]` = tap target, `(( ))` = hex avatar, `~jar~` = honey jar meter. Tablet: kid screens scale tiles up and lay out in 2-3 columns (max content width 720), parent screens use a two-pane list/detail where noted. Landscape: keep layout, grid reflows to more columns.
+Conventions: wireframes are phone portrait. `[ ]` = tap target, `(( ))` = hex avatar, `~jar~` = honey jar meter. Tablet: kid screens scale tiles up and fill the centred column: kid home 3 columns (4 when content width >= 860), max width 960; member board 2 columns, max width 840; text screens (rewards, schedule, celebrate) max width 720, parent screens use a two-pane list/detail where noted. Landscape: keep layout, grid reflows to more columns.
 
 Persistent board chrome: top band (honey, or the member's tint inside Chore/Reward views) containing the back button (left, 64 pt) and the "Manager" hex (right, 64 pt). Sound-off state shows nothing on the board (no mute toggle there; Settings only).
 
@@ -423,8 +423,8 @@ Same pattern as 4.5. Row: emoji plate, name, cost with honey-drop icon. Sheet fi
 +------------------------------+
 ```
 
-- Components: AvatarTile (hero, 140-160 pt on phone, 200 on tablet), Pip, ManagerButton.
-- Shows up to 8 members, Kids and Adults together; no type label on the board (names and avatars only). Tiles wrap into rows of 2 (phone) or 3-4 (tablet).
+- Components: AvatarTile (hero, 140-160 pt on phone, scaled with the tile on tablet), Pip, ManagerButton.
+- Shows up to 8 members, Kids and Adults together; no type label on the board (names and avatars only). Tiles wrap into rows of 2 (phone) or fill the column in 3-4 columns (tablet).
 - Each avatar tile shows a **ring progress** of today's chores around the hex for every member, and a tiny **PointsPill** only for members who earn points, so a member sees "I'm 3 of 5" without opening.
 - Empty (no members): Pip with "No one's on the board yet. Open the Manager area to add your household." and only the Manager button emphasised (pulse once).
 - Loading: skeleton hexes. Error: n/a.
@@ -571,7 +571,7 @@ No components exist yet (greenfield). Build as a small shared kit in `apps/mobil
 
 | Component | Variants / props | Notes |
 |---|---|---|
-| **BigTapTile** | `kind`: chore, avatar, tab, action; `state`: default, pressed, done, locked, disabled; size: 160 (phone), 200 (tablet) | Sticker style; hit area = whole tile; emits `ui_tap` or its own cue; baseline for kid taps (>= 64 pt) |
+| **BigTapTile** | `kind`: chore, avatar, tab, action; `state`: default, pressed, done, locked, disabled; size: 160 (phone); on tablet tiles fill the column (~180-370 pt) | Sticker style; hit area = whole tile; emits `ui_tap` or its own cue; baseline for kid taps (>= 64 pt) |
 | **StampCheck** | `state`: empty (dashed ring), done, locked | Drives M1; vector SVG for crisp scaling |
 | **PointsCounter** | `size`: pill (32), header (48), hero (`display.xl`); `animatedTo` | Hex badge with honey drop icon; ticking logic (M2); `accessibilityLiveRegion=polite` announces final value only |
 | **PointsFlyChip** | from/to rects | Absolute overlay on a root-level portal so it can cross screens |
