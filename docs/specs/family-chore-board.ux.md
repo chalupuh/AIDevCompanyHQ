@@ -1,8 +1,9 @@
 # HiveBoard: UX, Visual Direction and Motion Spec
 
-> Owner: `ui-ux-designer` · Source of truth: `docs/specs/family-chore-board.md` (AC-1..AC-60, section 4a cues, section 6 moments)
+> Owner: `ui-ux-designer` · Source of truth: `docs/specs/family-chore-board.md` (AC-1..AC-78, section 4a cues, section 6 moments)
 > Status: draft for owner approval · Mobile-first (phone 390 x 844 pt reference), tablet adaptation noted per screen (family tablet is the primary device, 820 x 1180 pt reference)
 > Tokens in section 2 are the single source for the Expo app. The project had no `docs/design-tokens.md`; it is created alongside this file and mirrors section 2.
+> **Scope change 2026-11-11 (households):** the app serves any household, kids and adults. This file got copy and screen-name changes plus three additions: the member type toggle and points toggle (4.4), the household-type onboarding step (4.1) and the points-off variant of the member chore view (4.9). Design tokens (section 2), motion (section 3) and sound cues are unchanged, except that the avatar tint rule in 2.5 covers up to 8 members. "Kid mode" and "parent mode" below are the names of two **visual styles** (the Board look and the Manager look). The Board look is used for every member, kids and adults alike. Spec: "Scope change 2026-11-11: households", milestones 3 and 4.
 
 ---
 
@@ -33,7 +34,7 @@ Parent mode: **calm, clear, trustworthy, quiet.** Same bones (rounded, friendly,
 
 ### 1.4 Kid mode vs parent mode
 
-| Dimension | Kid mode (Kid Home, Chores, Rewards, Celebration) | Parent mode (PIN, Dashboard, Edit*, Schedule, Settings, Full Access) |
+| Dimension | Board look, "kid mode" (Board Home, Member chores, Rewards, Celebration) | Manager look, "parent mode" (PIN, Manager Dashboard, Members, Edit*, Schedule, Settings, Full Access) |
 |---|---|---|
 | Background | Warm cream paper `bg.kid`, subtle hex pattern at 4% | Cool paper `bg.parent` flat |
 | Shapes | Sticker: 3pt ink outline, hard offset shadow, radius 24+ | Flat cards: 1pt hairline, soft shadow `elev.1`, radius 16 |
@@ -42,8 +43,10 @@ Parent mode: **calm, clear, trustworthy, quiet.** Same bones (rounded, friendly,
 | Targets | 64 pt and up (never below 56) | 48 pt minimum, 56 for primary buttons |
 | Motion | Full spec section 3 | Fades and 150-250 ms slides only; PIN shake; purchase celebration is the one exception (M11) |
 | Sound | All 4a cues | `ui_tap`, `ui_back`, `pin_*`, `purchase_success` only |
-| Mode switch | Persistent 56 pt "Grown-ups" hex button, top-right, bee-wing glyph, no label. Tap opens PIN Entry (M7) | "Back to kids" button in the header, no PIN needed to return to kid view |
+| Mode switch | Persistent 56 pt "Manager" hex button, top-right, bee-wing glyph, no visible label (screen-reader label "Manager area"). Tap opens PIN Entry (M7) | "Back to board" button in the header, no PIN needed to return to the board |
 | Mode cue | Header band is honey | Header band is teal-slate with a small lock-open icon, so a parent (and an adult glancing at the screen) always knows which side they are on |
+
+The Board look is shared by Kid and Adult members. Nothing on the board is worded for children only unless the active member is a Kid (spec AC-70).
 
 ---
 
@@ -153,8 +156,8 @@ Both support Dynamic Type / font scaling; layouts must hold at 200% on parent sc
 
 - An avatar is a **rounded hex** (`r.hex`) with the 3pt outline, filled with one of **6 tints** (`honey.light`, `meadow.light`, `plum.light`, `sky.light`, `coral.light`, `paper.2`) and containing one emoji from a curated **24-emoji "face" set** (animals, a rocket, a star...). No custom characters, no photos (out of scope).
 - The kid's first name sits under the avatar in `title.kid`; the first letter is the screen-reader fallback and the avatar fallback if emoji is unset.
-- Up to 4 kids: tints auto-assigned in order so siblings are always distinguishable; the parent can change tint and emoji in Edit Children.
-- Each kid's tint tints their whole Chore/Reward header band, so a child instantly knows "this is my page" without reading.
+- The member's first name sits under the avatar in `title.kid`; the first letter is the screen-reader fallback and the avatar fallback if emoji is unset.
+- Up to 8 members: tints are auto-assigned in order (the 6 tints repeat from the 7th member; the emoji and the name still tell members apart). The manager can change tint and emoji in Household Members.
 
 ---
 
@@ -206,41 +209,83 @@ Both support Dynamic Type / font scaling; layouts must hold at 200% on parent sc
 
 Conventions: wireframes are phone portrait. `[ ]` = tap target, `(( ))` = hex avatar, `~jar~` = honey jar meter. Tablet: kid screens scale tiles up and lay out in 2-3 columns (max content width 720), parent screens use a two-pane list/detail where noted. Landscape: keep layout, grid reflows to more columns.
 
-Persistent kid-area chrome: top band (honey, or the child's tint inside Chore/Reward views) containing the back button (left, 64 pt) and the "Grown-ups" hex (right, 64 pt). Sound-off state shows nothing in kid area (no mute toggle for kids; Settings only).
+Persistent board chrome: top band (honey, or the member's tint inside Chore/Reward views) containing the back button (left, 64 pt) and the "Manager" hex (right, 64 pt). Sound-off state shows nothing on the board (no mute toggle there; Settings only).
 
 ### 4.1 Welcome / Onboarding (M6)
 
-Six steps, one idea each, in parent mode visuals with a kid-mode flourish (honey hero area). A parent is reading; the child is not required.
+Seven steps, one idea each, in Manager-look visuals with a board-look flourish (honey hero area). A manager (any adult) is reading; a child is not required.
 
-1. Welcome (Pip flies in, `onboarding_welcome`) 2. How it works (3-panel carousel: tap chore, earn honey, get rewards; each panel a mini looping illustration, loop disabled for Reduce Motion) 3. Create PIN 4. Confirm PIN 5. First child (name, age, avatar) 6. First chore + first reward (pre-filled suggestions from a short list as tappable chips, e.g. "Make bed 5", "Ice cream 100"; tapping creates and ends in the populated dashboard).
+1. Welcome (Pip flies in, `onboarding_welcome`) 2. How it works (3-panel carousel: tap chore, earn honey, get rewards; each panel a mini looping illustration, loop disabled for Reduce Motion) 3. Create PIN 4. Confirm PIN 5. **What kind of household?** (optional) 6. First member (name, type, age if Kid, avatar, points toggle) 7. First chore (+ first reward when a member earns points) from suggestion chips, ending in the populated dashboard.
+
+The StepDots row has 7 dots; the M6 motion spec applies unchanged with 7 dots instead of 6.
 
 ```
 +------------------------------+
-|                    . . o . . .|  <- 6 hex dots, honey fill = done
+|                  . . o . . . .|  <- 7 hex dots, honey fill = done
 |        [ Pip, hero ]         |
 |                              |
 |   Welcome to HiveBoard       |  display.l
-|   Your family's chore chart  |
-|   simple, private, one-time  |
-|   purchase.                  |
+|   Your household's chore     |
+|   board - simple, private,   |
+|   one-time purchase.         |
 |                              |
 |   [      Let's go      ]     |  primary 56pt
 |            Skip setup  (link)|  -> goes to PIN step only
 +------------------------------+
 ```
 
-- Components: Hero, StepDots, PrimaryButton, PinPad (steps 3-4), TextField, AgePicker, AvatarPicker, SuggestionChip.
-- Empty: n/a. Loading: none. Error: PIN mismatch "PINs didn't match - try again" with the shake (M8); Name required / Age must be 4-12 inline.
+- Components: Hero, StepDots, PrimaryButton, PinPad (steps 3-4), HouseholdTypeCard (step 5), TextField, MemberTypeToggle, AgePicker, PointsToggle, AvatarPicker, SuggestionChip.
+- Empty: n/a. Loading: none. Error: PIN mismatch "PINs didn't match - try again" with the shake (M8); Name required / Age must be 4-12 (Kids only) inline.
 - Locked/trial: trial starts silently; nothing shown at onboarding.
-- Copy: title/subtitle from spec 6.5; step 3 "Create a 4-digit PIN to protect the parent area."; step 4 "Re-enter your PIN to confirm."; step 2 panel captions "Tap a chore when it's done", "Collect honey points", "Trade points for rewards"; step 5 "Who's helping out?"; step 6 "Pick a first chore and a first reward - you can change them anytime."; finish "All set. Hand the tablet to {name}!" with button "Go to kid view".
-- A11y: stepper announced "Step 3 of 6"; Skip is reachable; no timed content.
+- Copy: title/subtitle from spec 6.5; step 3 "Create a 4-digit PIN to protect the Manager area."; step 4 "Re-enter your PIN to confirm."; step 2 panel captions "Tap a chore when it's done", "Collect honey points", "Trade points for rewards"; step 6 "Who's in your household?"; step 7 "Pick a first chore - and a first reward if anyone earns points. You can change them anytime."; finish "All set! Your board is ready." with button "Open the board" (if the first member is a Kid: "All set. Hand the tablet to {name}!" with button "Go to the board").
+- A11y: stepper announced "Step 3 of 7"; Skip is reachable; no timed content.
+
+**Step 5: What kind of household? (optional)**
+
+```
++------------------------------+
+|                  . . . . o . .|
+|     What kind of household?  |  display.l
+|   This only picks example    |
+|   chores to start you off.   |
+|   You can change everything  |
+|   later.                     |
+|  +------------------------+  |
+|  | (family) Family with   |  |  HouseholdTypeCard, radio,
+|  |          kids      [ ] |  |  min 72 pt tall, whole card tappable
+|  +------------------------+  |
+|  | (couple) Couple or     |  |
+|  |          roommates [ ] |  |
+|  +------------------------+  |
+|  | (barn)   Farm, barn or |  |
+|  |          property  [ ] |  |
+|  +------------------------+  |
+|   [   Continue   ]   Skip    |
++------------------------------+
+```
+
+- Single select. Selected card shows a check glyph, a thicker outline and the tint (never colour alone). Continue stays disabled until a card is selected; **Skip** is always enabled and behaves as "Family with kids" (spec AC-72).
+- The choice only sets (a) the default type in step 6 (Family with kids: Kid; Couple or roommates and Farm, barn or property: Adult) and (b) which suggestion chips step 7 shows. Nothing else is stored. No network.
+- Suggestion chips shown in step 7 (spec AC-73; name and points; created only when tapped):
+
+| Preset | Chore chips | Reward chip (only if a member earns points, AC-74) |
+|---|---|---|
+| Family with kids (and Skip) | "Make bed" 5 pts, "Brush teeth" 3 pts, "Set the table" 5 pts | "Ice cream" 100 pts |
+| Couple or roommates | "Wash dishes" 5 pts, "Take out the trash" 5 pts, "Do laundry" 10 pts | "Movie night" 100 pts |
+| Farm, barn or property | "Feed the horses" 10 pts, "Muck out stalls" 15 pts, "Fill water troughs" 5 pts | "Movie night" 100 pts |
+
+- Empty/Loading: none. Error: none possible.
+- Assets: 3 small spot icons (family, couple/roommates, barn), see section 8.
+- A11y: radio group "What kind of household?"; each card reads "{label}, selected/not selected".
+
+**Step 6: First member.** Same fields as the Member sheet in 4.4 (name, type, age for Kids, points toggle, avatar). The type defaults from step 5. Error copy as in 4.4.
 
 ### 4.2 PIN Entry (M8)
 
 ```
 +------------------------------+
 | [x]            (lock icon)   |
-|        Grown-ups only        |  title.parent
+|         Manager area         |  title.parent
 |        Enter your PIN        |
 |          o  o  o  o          |  4 dots, 24pt
 |   [1]  [2]  [3]              |  keys 72x72, gap 16
@@ -252,59 +297,66 @@ Six steps, one idea each, in parent mode visuals with a kid-mode flourish (honey
 
 - PinPad is **scrambled? No**: fixed layout (predictable for the parent; the gate's job is to stop young children via a PIN they do not know). Keys 72 pt, haptics per 4a/AC-51.
 - States: Idle; Typing; Error ("Incorrect PIN - try again", dots berry, shake, haptic); Cooldown after 5 failures: keypad disabled, ring countdown with "Try again in 24 s" (`aria-live` updates every 5 s, not every second); Success.
-- Used for: kid -> parent, purchase flow, restore purchase, external links (AC-53). Context line changes: "Enter your PIN to continue".
+- Used for: board -> Manager area, purchase flow, restore purchase, external links (AC-53). Context line changes: "Enter your PIN to continue". Any adult who knows the shared PIN can enter (AC-69).
 - Loading: none. Never biometric (AC-34).
 - Cooldown copy: "Too many tries. You can try again in {n} seconds."
 - A11y: each key has label "1".."9","0","Delete"; dots are one element "{k} of 4 digits entered"; error and cooldown are announced.
 
-### 4.3 Parent Dashboard
+### 4.3 Manager Dashboard (was Parent Dashboard)
 
 ```
 +------------------------------+
-| HiveBoard      [Back to kids]|  teal header
+| Manager area  [Back to board]|  teal header
 +------------------------------+
 | [Trial] 9 days left in your  |  dismissible when <=3d rule
 | free trial          [Details]|
 | [Reset notice card] (M12) [x]|
 | Today                        |
-| ((A)) Ana    3/5 done  120pt |  row, tap -> child's chores
-| ((B)) Ben    5/5 done   45pt |
-| ((+)) Add child     (slot 2/4)|
+| ((A)) Ana  Kid    3/5  120pt |  row, tap -> member's chores
+| ((B)) Ben  Kid    5/5   45pt |
+| ((S)) Sam  Adult  2/4        |  no points shown when points are off
+| ((+)) Add member     (slot 4/8)|
 | Quick actions                |
 | [Chores] [Rewards] [Schedule]|
-| [Children]        [Settings] |
+| [Members]         [Settings] |
 +------------------------------+
 ```
 
-- Components: ParentHeader, TrialBanner, ResetNoticeCard, ChildSummaryRow (avatar, mini ProgressBar, points), ActionTile (parent variant), AddRow.
-- Tablet: two columns, left child list, right quick actions.
-- Empty (no children): Pip illustration, "Add your first child to get started!" and button "Add child".
+- Components: ParentHeader, TrialBanner, ResetNoticeCard, MemberSummaryRow (avatar, name, **type label "Kid" or "Adult" as text**, mini ProgressBar, points only if the member earns points), ActionTile (parent variant), AddRow.
+- Tablet: two columns, left member list, right quick actions.
+- Empty (no members): Pip illustration, "Add your first household member to get started!" and button "Add member".
 - Loading: skeleton rows (3). Error: n/a.
-- Trial: banner "{n} days left in your free trial"; 3 days before expiry a dismissible reminder with "Get Full Access". After expiry (demo): banner "Your free trial has ended. HiveBoard is in demo mode (1 child, 3 chores). Get Full Access to unlock everything." (persistent, not dismissible) and locked children rows dimmed with padlock badge and dashed outline.
-- Reset notice (M12): "Points were reset on {date}. {Name}: {n} pts cleared." with dismiss.
+- Trial: banner "{n} days left in your free trial"; 3 days before expiry a dismissible reminder with "Get Full Access". After expiry (demo): banner "Your free trial has ended. HiveBoard is in demo mode (1 member, 3 chores). Get Full Access to unlock everything." (persistent, not dismissible) and locked member rows dimmed with padlock badge and dashed outline.
+- Reset notice (M12): "Points were reset on {date}. {Name}: {n} pts cleared." with dismiss; lists only members whose points were cleared.
 
-### 4.4 Edit Children
+### 4.4 Household Members (was Edit Children)
 
 ```
 +------------------------------+
-| <  Children            [ + ] |
-| ((A)) Ana, 7      [edit][del]|
-| ((B)) Ben, 5   (locked) [..] |
-| Add child 2 of 4             |
+| <  Household members    [ + ] |
+| ((A)) Ana   Kid, 7   Points on [edit][del]
+| ((S)) Sam   Adult    No points [edit][del]
+| ((B)) Ben   Kid, 5   (locked) [..]
+| Add member 3 of 8            |
 +------------------------------+
-Add/Edit child (sheet):
+Add/Edit member (sheet):
  Avatar tile preview  ((A))
- [Name        ] 1-20 chars
- Age  [-] 7 [+]        4-12
+ [Name        ]            1-20 chars
+ Type  [ Kid | Adult ]      MemberTypeToggle (segmented)
+ Age   [-] 7 [+]            4-12, shown for Kid only
+ Earns points & rewards  [ON ]   PointsToggle
+   Completed chores earn points that can be traded for rewards.
  Emoji  [24-grid]  Colour [6]
  [Save]   [Cancel]
- Remove child (berry text link)
+ Remove member (berry text link)
 ```
 
-- Components: ChildRow, Sheet, TextField, Stepper (age), AvatarPicker, ConfirmDialog.
-- Empty: "No children yet - tap + to add one." with Pip.
-- Error: "Name required", "Age must be 4-12", limit "Maximum of 4 children reached.", demo "Demo mode includes 1 child. Get Full Access for up to 4." with a Get Full Access button (PIN already satisfied in parent area).
-- Locked children (AC-45): dimmed 60% **plus** padlock badge and dashed outline, not editable, label "Locked - unlocks with Full Access".
+- Components: MemberRow, Sheet, TextField, MemberTypeToggle (SegmentedPicker with 2 options, 48 pt, selected = fill + check glyph), Stepper (age), PointsToggle (Toggle with helper text), AvatarPicker, ConfirmDialog.
+- **Member type toggle:** default Kid for a new member (or the default from the onboarding household step). Selecting Adult hides the age stepper and discards the age; selecting Kid shows the stepper (age required before Save). Row subtitle shows the type as text ("Kid, 7" / "Adult").
+- **Points toggle:** label "Earns points & rewards". Default ON for a new Kid and OFF for a new Adult; changing the type resets the default only if the toggle has not been touched. Helper text swaps with the state: ON "Completed chores earn points that can be traded for rewards." OFF "Chores are ticked off and tracked, with no points or rewards." Turning it OFF on an existing member shows no scary dialog; their balance is kept, hidden (spec AC-67). The row shows a text chip "Points on" / "No points" (not colour alone).
+- Empty: "No one here yet - tap + to add someone." with Pip. Screen title and onboarding step 6 use "Who's in your household?".
+- Error: "Name required", "Age must be 4-12" (Kids only), limit "Maximum of 8 household members reached.", demo "Demo mode includes 1 member. Get Full Access for up to 8." with a Get Full Access button (PIN already satisfied in the Manager area).
+- Locked members (AC-45): dimmed 60% **plus** padlock badge and dashed outline, not editable, label "Locked - unlocks with Full Access".
 - Delete confirm (AC-9): "Remove {name}? Their completed chores and redeemed rewards will be deleted." Buttons: "Remove" (berry), "Keep".
 
 ### 4.5 Edit Chores
@@ -331,12 +383,14 @@ Chore sheet:
 - Demo limit: "Maximum of 3 chores in demo mode. Get Full Access for unlimited chores." as a banner above the list at 3/3, with the "+" button replaced by a dashed padlock "+" that opens the paywall.
 - Locked chores (beyond 3 oldest): dimmed + padlock.
 - Editing text: "Changes apply to everyone this chore is assigned to." (AC-14).
+- Points note: when the selected members include someone who does not earn points, a caption under the member chips reads "Points go only to members who earn points." The points field stays required (1-500) as before.
 
 ### 4.6 Edit Rewards
 
-Same pattern as 4.5. Row: emoji plate, name, cost with honey-drop icon. Sheet fields: emoji, name, cost (1-1000, chips 25 50 100 250), optional "Set as goal for" (child chips) to feed the jar's target.
+Same pattern as 4.5. Row: emoji plate, name, cost with honey-drop icon. Sheet fields: emoji, name, cost (1-1000, chips 25 50 100 250), optional "Set as goal for" (chips for members who earn points only) to feed the jar's target.
 - Empty: "No rewards yet - set one as a goal!" Errors: "Name required", "Cost must be 1-1000".
 - Demo: rewards editable but note "Kids can redeem rewards with Full Access." Non-blocking.
+- If no member earns points, a banner at the top reads "No one earns points yet. Turn on "Earns points & rewards" for a member to use rewards." with a link to Household Members.
 
 ### 4.7 Weekly Schedule
 
@@ -354,28 +408,30 @@ Same pattern as 4.5. Row: emoji plate, name, cost with honey-drop icon. Sheet fi
 - Empty: "No chores scheduled this week." and button "Edit chores". Loading: skeleton. Error: n/a.
 - Shows a one-line hint "Week resets on {day} at midnight."
 
-### 4.8 Kid Home
+### 4.8 Board Home (was Kid Home)
 
 ```
 +------------------------------+
-|                    [Grown-up]|  honey band, hex wing button
+|                     [Manager]|  honey band, hex wing button
 |                              |
 |     Who's helping today?     |  display.l (and Pip waving)
 |                              |
 |     ((  A  ))   ((  B  ))    |  BigTapTile avatar, 140pt hex
 |       Ana          Ben       |
-|     ((  C  ))   ((  +  ))    |  (+ not shown to kids)
+|     ((  S  ))   ((  +  ))    |  (+ not shown on the board)
+|       Sam                    |
 +------------------------------+
 ```
 
-- Components: AvatarTile (hero, 140-160 pt on phone, 200 on tablet), Pip, GrownUpsButton.
-- Each avatar tile shows a tiny **PointsPill** and a **ring progress** of today's chores around the hex, so a child sees "I'm 3 of 5" without opening.
-- Empty (no kids): Pip with "Ask a grown-up to set up children." and only the Grown-ups button emphasised (pulse once).
+- Components: AvatarTile (hero, 140-160 pt on phone, 200 on tablet), Pip, ManagerButton.
+- Shows up to 8 members, Kids and Adults together; no type label on the board (names and avatars only). Tiles wrap into rows of 2 (phone) or 3-4 (tablet).
+- Each avatar tile shows a **ring progress** of today's chores around the hex for every member, and a tiny **PointsPill** only for members who earn points, so a member sees "I'm 3 of 5" without opening.
+- Empty (no members): Pip with "No one's on the board yet. Open the Manager area to add your household." and only the Manager button emphasised (pulse once).
 - Loading: skeleton hexes. Error: n/a.
-- Locked children (demo): hex dimmed with padlock and tapping gives `reward_locked`-style wobble, no copy about money; text "Ask a grown-up." Kids never see trial or price text (UX goal 6).
-- A11y: each tile is a button "Ana, 3 of 5 chores done, 120 points".
+- Locked members (demo): hex dimmed with padlock and tapping gives `reward_locked`-style wobble, no copy about money; a Kid's tile says "Ask a grown-up.", an Adult's tile says "Locked." The board never shows trial or price text (UX goal 6).
+- A11y: each tile is a button "Ana, 3 of 5 chores done, 120 points" or, for a member without points, "Sam, 2 of 4 chores done".
 
-### 4.9 Kid Chore View (M1-M4, M7)
+### 4.9 Member Chore View (was Kid Chore View) (M1-M4, M7)
 
 ```
 +------------------------------+
@@ -399,6 +455,26 @@ Same pattern as 4.5. Row: emoji plate, name, cost with honey-drop icon. Sheet fi
 - Interaction: the whole tile is the target (no tiny checkbox). Undo is the same tap, with a 3 s inline hint the first time ever ("Tap again to undo"), stored in local state.
 - A11y: tile role button, label "Make bed, 5 points, not done", state flips to "done" with announcement "Make bed done, plus 5 points".
 
+**Points-off variant (member does not earn points, spec AC-65):**
+
+```
++------------------------------+
+| [<]  ((S)) Sam      [2 of 4] |  band in Sam's tint; progress pill replaces PointsCounter
+| Today                        |
+| +----------+ +----------+    |
+| |  (horse) | | (trough) |    |  chore tiles: no "+n" chip
+| | Feed     | | Fill     |    |
+| | horses   | | troughs  |    |
+| | [check]  | | (O dashed)|   |
+| +----------+ +----------+    |
++------------------------------+
+```
+
+- The progress pill reads "{done} of {total} done" and fills as chores are ticked. No PointsCounter, honey jar, Rewards tab or "+n" chip is rendered.
+- Motion: M1 (stamp) and M4 (all done for today) run as specified. M2 (points fly) and M3 (jar fill) do not run; the progress pill updates with a 200 ms cross-fade instead. Sounds: `chore_complete`, `chore_undo` and `milestone` (day done) play; `points_fly`, `points_tick` and `progress_fill` do not.
+- Day-done banner is unchanged: "Great job! All done for today."
+- A11y: tile label "Feed horses, not done"; completion announcement "Feed horses done" (no points).
+
 ### 4.10 Reward Screen
 
 ```
@@ -420,6 +496,7 @@ Same pattern as 4.5. Row: emoji plate, name, cost with honey-drop icon. Sheet fi
 - RewardCard states: **Ready** (plum outline thickness 4, shimmer sweep, white plum "Get it!" button), **Not yet** (paper.2 fill, cost + small progress bar "20 more", taps trigger M10), **Goal** (child's chosen/closest target, a star badge, is the jar's target), **Demo-locked** (padlock, "Ask a grown-up to unlock rewards.", no button).
 - Redeem confirm: bottom mini sheet "Get {reward}?" with big "Yes!" (honey) and "Not now" (outline); prevents accidental redemptions, 2 taps total.
 - Empty (no rewards or zero points): Pip + "Complete chores to earn points!" with a chore-tab arrow. Loading: skeleton. Error: n/a.
+- Only members who earn points have the Rewards tab. In demo mode, a Kid sees "Ask a grown-up to unlock rewards."; an Adult who earns points sees "Ask the manager to unlock rewards."
 
 ### 4.11 Reward Celebration (M5)
 
@@ -457,6 +534,7 @@ Same pattern as 4.5. Row: emoji plate, name, cost with honey-drop icon. Sheet fi
 
 - Components: SettingsRow (toggle, picker, link), SegmentedPicker, ConfirmDialog, Toast.
 - Reset points: picking Weekly/Monthly/Quarterly shows "Unspent points will be set to 0 at the start of each {period}. Continue?" with "Continue"/"Cancel"; nothing resets immediately (AC-41).
+- Reset points applies only to members who earn points; helper text under the option: "Applies to members who earn points."
 - Import: "This will replace all current data. Continue?" -> picker. Error toast: "Import failed - check file format". Export: share sheet.
 - Reminder: turning it on prompts the OS notification permission here only.
 - About: "HiveBoard - No data collected. Everything stays on this device." Privacy policy link: external link, behind PIN (the user is already in a PIN-gated area; the link additionally shows the PIN gate again if the session is older than 5 min, to satisfy AC-53 literally. Decision for architect to confirm).
@@ -469,11 +547,12 @@ Same pattern as 4.5. Row: emoji plate, name, cost with honey-drop icon. Sheet fi
 | <                            |
 |     (padlock badge, Pip)     |
 |   Unlock the Full HiveBoard  |
-|  Add up to 4 children and    |
-|  unlimited chores with a     |
-|  one-time purchase. No       |
-|  subscription, no ads.       |
-|  [4 children] [Unlimited]    |
+|  Add up to 8 household       |
+|  members and unlimited       |
+|  chores with a one-time      |
+|  purchase. No subscription,  |
+|  no ads.                     |
+|  [8 members] [Unlimited]     |
 |  [ Get Full Access - $4.99 ] |
 |  Restore purchase            |
 +------------------------------+
@@ -499,12 +578,16 @@ No components exist yet (greenfield). Build as a small shared kit in `apps/mobil
 | **HoneyJar (ProgressBar)** | `variant`: jar-large, jar-compact, bar-flat (parent, linear); `value`, `target`, `affordable` | Skia/SVG liquid; text alternative "80 of 100 points toward Ice cream" |
 | **RewardCard** | `state`: ready, notYet, goal, demoLocked | Shimmer on ready; M10 wobble |
 | **AvatarHex** | `size`: 40, 64, 96, 140; `tint`, `emoji`, `ring` (daily progress) | Fallback to initial |
-| **KidHeader / ParentHeader** | band colour from child tint / teal | Includes GrownUpsButton or BackToKids |
-| **GrownUpsButton** | -- | 64 pt hex, wing icon, label "Grown-ups" (a11y only) |
+| **KidHeader / ParentHeader** | band colour from child tint / teal | Includes ManagerButton or BackToBoard |
+| **ManagerButton** (was GrownUpsButton; the code name may stay) | -- | 64 pt hex, wing icon, screen-reader label "Manager area" |
 | **PinPad + PinDots** | `mode`: set, confirm, enter; `state`: idle, error, cooldown, success | Keys 72 pt; M8 |
 | **Celebration overlay** | `variant`: reward (M5), daily (M4 banner), purchase (M11) | Shared particle engine (pooled), single Reduce Motion switch |
 | **Button** | `kid-primary` (honey), `kid-secondary` (white), `kid-plum`; `parent-primary` (teal), `parent-secondary` (outline), `destructive` (berry); sizes 56/64 | Loading state with spinner; disabled = dashed outline |
 | **TextField, Stepper, SegmentedPicker, Toggle, DayChip, EmojiPicker, AvatarPicker, SuggestionChip** | Parent styles | Min 48 pt; labels always visible (no placeholder-only) |
+| **MemberTypeToggle** | `value`: kid, adult | 2-option SegmentedPicker, 48 pt, check glyph on the selected option; switching to Adult hides the age Stepper |
+| **PointsToggle** | `value`, `helper` | Toggle labelled "Earns points & rewards" with state-dependent helper text (4.4) |
+| **HouseholdTypeCard** | `preset`: family, couple, farm; `selected` | Radio card, 72 pt min height, icon + label, check glyph when selected (onboarding step 5) |
+| **ProgressPill** | `done`, `total` | Replaces PointsCounter for members without points; "{done} of {total} done" |
 | **Sheet / ConfirmDialog** | `destructive` flag | Focus trap, esc/back closes |
 | **TrialBanner / ResetNoticeCard** | `tone`: info (sky.light), reminder (honey.light) | Dismissible; parent only |
 | **EmptyState** | `illustration`, `title`, `cta` | Pip or spot art; M9 |
@@ -528,8 +611,8 @@ Build order suggestion for mobile-dev: tokens + Button + BigTapTile + StampCheck
 - **Dynamic Type**: supports up to 150% (kid) / 200% (parent); tiles grow vertically; numbers never truncate; verify with 2-line labels.
 - **Keyboard / switch access** (tablets with keyboards, switch control): full tab order, visible 3 pt focus ring `plum` offset 2 pt on all focusable elements, PIN pad accepts hardware digits and Backspace.
 - **Sound / haptics (AC-48..AC-51)**: sound is never the only feedback; haptics skipped without engine; ambient audio category so music is never interrupted.
-- **Cognitive**: one primary action per kid screen; consistent positions (back left, Grown-ups right, points top); no timers visible to kids; no time-limited rewards.
-- **Safety (Kids category)**: no links, prices, or purchase CTAs on any kid screen; Pip never speaks or pressures; no "streak lost" messaging.
+- **Cognitive**: one primary action per kid screen; consistent positions (back left, Manager right, points top); no timers visible to kids; no time-limited rewards.
+- **Safety (child-safe for everyone)**: no links, prices, or purchase CTAs on any board screen, for Kid or Adult members; Pip never speaks or pressures; no "streak lost" messaging.
 
 ---
 
@@ -537,7 +620,7 @@ Build order suggestion for mobile-dev: tokens + Button + BigTapTile + StampCheck
 
 | Element | Copy |
 |---|---|
-| Kid home prompt | "Who's helping today?" |
+| Board prompt | "Who's helping today?" |
 | Chore tile first-time hint | "Tap when it's done. Tap again to undo." |
 | Day done banner | "Great job! All done for today." |
 | Chore completed toast/chip | "Great job! +{n} pts" (spec) shown as the flying chip "+{n}" |
@@ -545,17 +628,27 @@ Build order suggestion for mobile-dev: tokens + Button + BigTapTile + StampCheck
 | Reward ready | "Ready!" |
 | Confirm redeem | "Get {reward}?" / "Yes!" / "Not now" |
 | Celebration | "Reward Redeemed!" / "{reward name} is yours!" / "Yay!" |
-| Demo locked reward (kid) | "Ask a grown-up to unlock rewards." (spec) |
-| PIN prompt | "Grown-ups only" / "Enter your PIN" |
+| Demo locked reward | Kid: "Ask a grown-up to unlock rewards." (spec) / Adult who earns points: "Ask the manager to unlock rewards." |
+| PIN prompt | "Manager area" / "Enter your PIN" |
 | PIN error | "Incorrect PIN - try again" |
 | PIN cooldown | "Too many tries. You can try again in {n} seconds." |
 | PIN mismatch | "PINs didn't match - try again" |
-| Back to kids | "Back to kids" |
+| Back to board | "Back to board" |
 | Purchase success | "Unlocked! Thank you for supporting HiveBoard." |
 | Purchase failure | "Purchase didn't go through. You haven't been charged." (spec) |
 | Locked item (parent) | "Locked - unlocks with Full Access" |
 | Delete undo toast | "{name} removed. Undo" (only for chores/rewards; child delete uses the confirm dialog) |
 | Import failure | "Import failed - check file format" (spec) |
+| Household type step | "What kind of household?" / "Family with kids" / "Couple or roommates" / "Farm, barn or property" / "Skip" |
+| Members screen title | "Who's in your household?" |
+| Member type | "Kid" / "Adult" |
+| Points toggle | "Earns points & rewards" (helper texts in 4.4) |
+| Member limit | "Maximum of 8 household members reached." |
+| Demo limit (members) | "Demo mode includes 1 member. Get Full Access for up to 8." |
+| Empty board | "No one's on the board yet. Open the Manager area to add your household." |
+| Onboarding finish | "All set! Your board is ready." / "Open the board" |
+| Progress (no points) | "{done} of {total} done" |
+| Locked member on the board | Kid: "Ask a grown-up." / Adult: "Locked." |
 
 Tone: short, kind, concrete, present tense; no sarcasm, no pressure; max 6 words on kid surfaces where possible. `copy-voice` may polish.
 
@@ -577,10 +670,11 @@ All art is **original**. Style brief: flat-colour shapes with the 3 pt warm-ink 
 | **Avatar emoji set** | 24 face/animal emoji from the same family | included above |
 | **Empty-state spot art** (M9) | 5 illustrations with Pip: no children, no chores today, no rewards, no chores scheduled, all done | SVG, 240 x 240 |
 | **Onboarding panels** | 3 panel scenes ("tap a chore", "collect honey", "get a reward") plus welcome hero | SVG, 640 x 480 |
+| **Household-type icons** (onboarding step 5) | 3 spot icons in the same sticker style: family (adult + child silhouettes as rounded hexes), couple/roommates (two adult silhouettes), farm/barn/property (small barn with a hex window). No text | SVG, 96 x 96 |
 | **Celebration art** | Rotating rays, hex and star confetti pieces (6 shapes, 4 colours), banner sticker "Great job!", big plum background with hex pattern | SVG / sprite sheet |
 | **Paper texture + hex pattern** | Tileable 4% hex pattern for kid background; 2% paper grain | PNG 512 tile |
-| **Lock badge, wing "Grown-ups" icon, icon set** | Custom 24 pt icon set (section 2.4) | SVG |
-| **Store assets** | Screenshots in kid mode (Chore View mid-celebration, Rewards ready, Kid Home), parent mode (Dashboard, Schedule), Kids category-safe: no prices on kid shots, no real children | per store spec (Creative Studio `asset-list.md`) |
+| **Lock badge, wing "Manager" icon, icon set** | Custom 24 pt icon set (section 2.4) | SVG |
+| **Store assets** | Screenshots in board look (Member Chore View mid-celebration, Rewards ready, Board Home with mixed Kid and Adult members), Manager look (Dashboard, Schedule), including one Adult-member screenshot (spec AC-78). No prices on the board shots, no real children. Category-specific rules per the owner's store-category decision | per store spec (Creative Studio `asset-list.md`) |
 | **Sound pack** | Per section 4a; timbres: soft marimba, pop, chime. `copy-voice` | per architect format |
 
 ---
@@ -591,5 +685,6 @@ All art is **original**. Style brief: flat-colour shapes with the 3 pt warm-ink 
 2. **Emoji set**: bundle Noto Color Emoji PNGs (consistent look, ~1 MB) versus system emoji (smaller, differs per OS). Recommended: bundle.
 3. **Redeem confirmation**: add the 2-tap "Get {reward}?" sheet before the celebration (prevents accidental spends), or redeem on one tap? Recommended: 2 taps.
 4. **Particles via react-native-skia**: adds a dependency; fallback is <= 40 Animated views. Architect to confirm (affects bundle size and Kids review is unaffected, Skia is local).
-5. **Age band** (spec Q1): this design assumes 6-8 (icon-first with numerals and short words). If the band becomes "5 and under", kid copy should shrink further and kid-side numerals get speech-free pictograms.
+5. **Age band** (spec Q1): this design assumes 6-8 for Kid members (icon-first with numerals and short words). If the band becomes "5 and under", kid copy should shrink further and kid-side numerals get speech-free pictograms. If the owner moves to a general store category (spec Q4), the band question no longer applies to the store, but Kid members still use the same icon-first design.
 6. **Privacy-policy link PIN re-prompt** (4.12): confirm a second PIN prompt for external links is acceptable, or rely on being already in the gated area.
+7. **Store category** (spec Q4, added 2026-11-11): recommended general category; no UX change except the store screenshots (section 8).
