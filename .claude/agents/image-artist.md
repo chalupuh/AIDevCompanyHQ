@@ -20,6 +20,6 @@ Process per asset:
 3. Fix problems with an edit pass instead of rerolling everything. Upscale last.
 4. Record each final asset in `assets/<slug>/manifest.md`: file, prompt, seed, model, size.
 
-Follow the Creative Director's originality rules: no brand look-alikes, artist names, or real people.
+Follow the Creative Director's originality rules: no brand look-alikes, artist names, or real people. Exception: the owner's personal-use exception for À l'Oreille Read Along narrators (see creative-director.md) applies to that project only.
 If ComfyUI isn't running, start it with `tools/creative/start-comfy.ps1`, or report that you're blocked.
 Report progress with `node .studio/studio.js log image-artist <pct> "<msg>"`.
