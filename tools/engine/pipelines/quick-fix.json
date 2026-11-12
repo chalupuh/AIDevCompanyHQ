@@ -1,0 +1,94 @@
+{
+  "description": "Quick fix for an EXTERNAL app repo (internal repos use quick-fix-internal): branch studio/{{slug}} from origin/main → build (local, agent from the Team: line of the intake file) → QA (local) → review (Opus + Codex) → PR labelled owner-review → owner ship gate. Vars: workdir (app checkout), slug, idea (intake file).",
+  "required": [
+    "workdir",
+    "slug",
+    "idea"
+  ],
+  "defaults": {},
+  "stages": [
+    {
+      "id": "branch",
+      "type": "script",
+      "run": "git fetch origin && git switch -c studio/{{slug}} origin/main"
+    },
+    {
+      "id": "build",
+      "type": "agent",
+      "agent": "__team_lead__",
+      "designDoc": "{{idea}}",
+      "tier": "local",
+      "maxTurns": 40,
+      "timeoutMin": 45,
+      "task": "Quick fix. Implement exactly what the intake file {{idea}} asks for (only that, small and focused), using the Team role named in it; follow its rules. Run lint/typecheck/tests before finishing.",
+      "check": "npm run typecheck && npm test && npm run lint:baseline"
+    },
+    {
+      "id": "qa",
+      "type": "agent",
+      "agent": "qa-engineer",
+      "tier": "local",
+      "maxTurns": 30,
+      "task": "QA the quick fix {{slug}}: check the change against the acceptance criteria in {{idea}}. Follow your 'Pipeline runs' protocol (report file first). Write {{workdir}}/docs/quick-fix/{{slug}}.qa.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL'.",
+      "rework": {
+        "to": "build",
+        "verdict": "{{workdir}}/docs/quick-fix/{{slug}}.qa.md",
+        "failRegex": "VERDICT:[s*_`]*FAIL",
+        "max": 3
+      },
+      "expect": [
+        "{{workdir}}/docs/quick-fix/{{slug}}.qa.md"
+      ],
+      "check": "npm run typecheck && npm test && npm run lint:baseline && node -e \"if(!/VERDICT:[s*_`]*PASS/.test(require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.qa.md','utf8')))process.exit(1)\""
+    },
+    {
+      "id": "review",
+      "type": "agent",
+      "agent": "code-reviewer",
+      "tier": "opus",
+      "maxTurns": 60,
+      "task": "Review the whole diff of branch studio/{{slug}} against origin/main in {{workdir}} for the fix described in {{idea}}. Write {{workdir}}/docs/quick-fix/{{slug}}.review.md ending with 'APPROVE' or 'REQUEST CHANGES'.",
+      "rework": {
+        "to": "build",
+        "verdict": "{{workdir}}/docs/quick-fix/{{slug}}.review.md",
+        "failRegex": "REQUEST CHANGES[s*_`]*$",
+        "max": 3
+      },
+      "expect": [
+        "{{workdir}}/docs/quick-fix/{{slug}}.review.md"
+      ],
+      "check": "node -e \"const l=require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.review.md','utf8').trim().split('\n').pop().replace(/[s*_`]+/g,' ').trim();if(!/\bAPPROVE$/.test(l))process.exit(1)\""
+    },
+    {
+      "id": "review-codex",
+      "type": "agent",
+      "agent": "code-reviewer",
+      "tier": "codex",
+      "maxTurns": 60,
+      "task": "Review the whole diff of branch studio/{{slug}} against origin/main in {{workdir}} for the fix described in {{idea}}. Write {{workdir}}/docs/quick-fix/{{slug}}.review-codex.md ending with 'APPROVE' or 'REQUEST CHANGES'.",
+      "rework": {
+        "to": "build",
+        "verdict": "{{workdir}}/docs/quick-fix/{{slug}}.review-codex.md",
+        "failRegex": "REQUEST CHANGES[s*_`]*$",
+        "max": 3
+      },
+      "expect": [
+        "{{workdir}}/docs/quick-fix/{{slug}}.review-codex.md"
+      ],
+      "check": "node -e \"const l=require('fs').readFileSync('{{workdir}}/docs/quick-fix/{{slug}}.review-codex.md','utf8').trim().split('\n').pop().replace(/[s*_`]+/g,' ').trim();if(!/\bAPPROVE$/.test(l))process.exit(1)\""
+    },
+    {
+      "id": "pr",
+      "type": "script",
+      "run": "git add -A && git commit -m \"fix: {{slug}}\" && git push -u origin studio/{{slug}} && gh pr create --label owner-review --fill"
+    },
+    {
+      "id": "ship-gate",
+      "type": "gate",
+      "title": "{{slug}}: PR opened (label owner-review). Owner: review and merge the PR, then publish.",
+      "show": [
+        "{{idea}}"
+      ]
+    }
+  ]
+}
