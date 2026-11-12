@@ -47,7 +47,7 @@
           "type": "agent",
           "agent": "qa-engineer",
           "tier": "local",
-          "maxTurns": 30,
+          "maxTurns": 45,
           "allowedTools": [
             "Read",
             "Write",
@@ -62,7 +62,7 @@
           "expect": [
             "docs/internal/qa/s{{sprint}}-task-{{n}}.md"
           ],
-          "check": "node -e \"if(!/VERDICT: PASS/.test(require('fs').readFileSync('{{home}}/docs/internal/qa/s{{sprint}}-task-{{n}}.md','utf8')))process.exit(1)\""
+          "check": "node -e \"if(!/VERDICT:[\\s*_\\x60]*PASS/.test(require('fs').readFileSync('{{home}}/docs/internal/qa/s{{sprint}}-task-{{n}}.md','utf8')))process.exit(1)\""
         }
       ]
     },
@@ -71,7 +71,7 @@
       "type": "agent",
       "agent": "code-reviewer",
       "tier": "opus",
-      "maxTurns": 30,
+      "maxTurns": 60,
       "allowedTools": [
         "Read",
         "Write",
@@ -81,10 +81,16 @@
         "Bash(node tools/ci/check-config.js)"
       ],
       "task": "Review the whole internal sprint: every unchecked task in {{backlog}}, {{home}}/docs/internal/sprint-log.md and {{home}}/docs/internal/qa/*.md. Read the changed files. Write {{home}}/docs/internal/review-sprint{{sprint}}.md with findings (Blocker / Should fix / Nit, file:line, fix) and end with 'APPROVE' or 'REQUEST CHANGES'.",
+      "rework": {
+        "to": "build",
+        "verdict": "docs/internal/review-sprint{{sprint}}.md",
+        "failRegex": "REQUEST CHANGES[\\s*_`]*$",
+        "max": 3
+      },
       "expect": [
         "docs/internal/review-sprint{{sprint}}.md"
       ],
-      "check": "node -e \"if(!/APPROVEs*$/.test(require('fs').readFileSync('{{home}}/docs/internal/review-sprint{{sprint}}.md','utf8').trim()))process.exit(1)\""
+      "check": "node -e \"const l=require('fs').readFileSync('{{home}}/docs/internal/review-sprint{{sprint}}.md','utf8').trim().split('\\n').pop().replace(/[\\s*_\\x60]+/g,' ').trim();if(!/\\bAPPROVE$/.test(l))process.exit(1)\""
     },
     {
       "id": "tick",

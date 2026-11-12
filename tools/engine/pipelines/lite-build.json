@@ -15,16 +15,16 @@
       "stages": [
         { "id": "build", "type": "agent", "agent": "__team_lead__", "designDoc": "{{home}}/docs/specs/{{slug}}.design.md", "tier": "local", "maxTurns": 60, "timeoutMin": 60,
           "task": "Implement '{{item}}' from {{home}}/docs/specs/{{slug}}.design.md (only that milestone). Use the Team role named in design.md; follow its rules. Run lint/typecheck/tests before finishing." },
-        { "id": "qa", "type": "agent", "agent": "qa-engineer", "tier": "local", "maxTurns": 40,
-          "task": "QA '{{item}}' of {{slug}} against {{home}}/docs/specs/{{slug}}.md. Write {{home}}/docs/specs/{{slug}}.qa-m{{n}}.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL'.",
-          "rework": { "to": "build", "verdict": "{{home}}/docs/specs/{{slug}}.qa-m{{n}}.md", "max": 3 },
+        { "id": "qa", "type": "agent", "agent": "qa-engineer", "tier": "local", "maxTurns": 45,
+          "task": "QA '{{item}}' of {{slug}}: only the tasks and 'Try it' of that milestone in {{home}}/docs/specs/{{slug}}.design.md, checked against the matching acceptance criteria in {{home}}/docs/specs/{{slug}}.md. Follow your 'Pipeline runs' protocol (report file first). Write {{home}}/docs/specs/{{slug}}.qa-m{{n}}.md ending with a line 'VERDICT: PASS' or 'VERDICT: FAIL'.",
+          "rework": { "to": "build", "verdict": "{{home}}/docs/specs/{{slug}}.qa-m{{n}}.md", "failRegex": "VERDICT:[\\s*_`]*FAIL", "max": 3 },
           "expect": ["{{home}}/docs/specs/{{slug}}.qa-m{{n}}.md"],
-          "check": "node -e \"if(!/VERDICT: PASS/.test(require('fs').readFileSync('{{home}}/docs/specs/{{slug}}.qa-m{{n}}.md','utf8')))process.exit(1)\"" },
-        { "id": "review", "type": "agent", "agent": "code-reviewer", "tier": "opus", "maxTurns": 25,
+          "check": "node -e \"if(!/VERDICT:[\\s*_\\x60]*PASS/.test(require('fs').readFileSync('{{home}}/docs/specs/{{slug}}.qa-m{{n}}.md','utf8')))process.exit(1)\"" },
+        { "id": "review", "type": "agent", "agent": "code-reviewer", "tier": "opus", "maxTurns": 60,
           "task": "Review the whole diff for '{{item}}' of {{slug}}. Write {{home}}/docs/specs/{{slug}}.review-m{{n}}.md ending with 'APPROVE' or 'REQUEST CHANGES'.",
-          "rework": { "to": "build", "verdict": "{{home}}/docs/specs/{{slug}}.review-m{{n}}.md", "failRegex": "REQUEST CHANGES\\s*$", "max": 3 },
+          "rework": { "to": "build", "verdict": "{{home}}/docs/specs/{{slug}}.review-m{{n}}.md", "failRegex": "REQUEST CHANGES[\\s*_`]*$", "max": 3 },
           "expect": ["{{home}}/docs/specs/{{slug}}.review-m{{n}}.md"],
-          "check": "node -e \"if(!/APPROVE\\s*$/.test(require('fs').readFileSync('{{home}}/docs/specs/{{slug}}.review-m{{n}}.md','utf8').trim()))process.exit(1)\"" }
+          "check": "node -e \"const l=require('fs').readFileSync('{{home}}/docs/specs/{{slug}}.review-m{{n}}.md','utf8').trim().split('\\n').pop().replace(/[\\s*_\\x60]+/g,' ').trim();if(!/\\bAPPROVE$/.test(l))process.exit(1)\"" }
       ] },
     { "id": "ship-gate", "type": "gate", "title": "{{slug}}: all milestones passed QA + review. OK to prepare release?", "show": ["{{home}}/docs/specs/{{slug}}.design.md"] }
   ]
