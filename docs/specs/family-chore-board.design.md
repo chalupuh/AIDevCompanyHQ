@@ -85,17 +85,19 @@ Internal module contracts: `src/db/repos/*` (typed CRUD), `src/domain/*` (pure),
 
 ## 4. Folder layout (owner: mobile-dev unless noted)
 
-Households change: **file paths stay as they are** (`app/kid/*` = the Board, `app/parent/*` = the Manager area, `parent/children.tsx` = Members, `[childId]` = member id). Only UI labels change ("Board", "Manager area", "Members"). New files: `app/onboarding/household.tsx`, `src/domain/presets.ts`, `src/copy/wording.ts`, a new migration in `src/db/migrations.ts`.
+Households change: **file paths stay as they are** (`app/kid/*` = the Board, `app/parent/*` = the Manager area, `parent/children.tsx` = Members, `[childId]` = member id). Only UI labels change ("Board", "Manager area", "Members"). New files: `app/onboarding/household.tsx`, `src/domain/presets.ts`, `src/notify/reminder.ts`, a new migration in `src/db/migrations.ts`.
 
 ```
 app/                         expo-router screens (layouts per ux.md)
   index.tsx                  → onboarding if no PIN, else Kid Home
   onboarding/  pin.tsx
   kid/index.tsx  kid/[childId]/index.tsx  kid/[childId]/rewards.tsx  kid/[childId]/celebrate.tsx
+  kid/[childId]/schedule.tsx (weekly view)
   parent/_layout.tsx (PIN guard)  parent/index.tsx  children.tsx  chores.tsx  rewards.tsx
   parent/schedule.tsx  parent/settings.tsx  parent/about.tsx  parent/full-access.tsx
+  parent/change-pin.tsx  parent/reminder.tsx  parent/backup.tsx (Export / Import)
   dev/gallery.tsx            design-system + motion + sound gallery (dev builds only)
-src/db/        schema.sql, migrations.ts, repos/*.ts
+src/db/        migrations.ts (source of truth for the schema; the old schema.sql was removed), repos/*.ts
 src/domain/    points.ts, resets.ts, schedule.ts, access.ts, trialClock.ts, pin.ts, gate.ts, backup.ts (+ tests)
 src/ui/        tokens.ts (from ux.md), components (BigTapTile ≥48pt, ChoreCard, PointsCounter, ProgressBar, PinPad, EmojiPicker, LockedOverlay, EmptyState)
 src/motion/    useMotion.ts, springs.ts, Confetti.tsx (Skia), PointsFly.tsx, transitions.ts
