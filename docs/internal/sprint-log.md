@@ -174,3 +174,78 @@ Internal tasks for the Studio engine and tooling.
 - S2-B3: cursor via CSS: `.o-zoom-viewport{cursor:grab}` and `.dragging{cursor:grabbing}` (class toggled on the viewport); inline cursor styles removed.
 
 **Verified:** `npm --prefix .studio/app run build` OK; `npm --prefix .studio/app test` 92/92 pass. Drag behaviour has no unit test (no DOM test environment in the app); checked by code reading only.
+
+## Sprint 4j Task 1
+
+**Changed:**
+- `docs/runbook-bld.md` (new): 10-section BLD move-over (prerequisites, code, runtime state copy, machine.json bld-3090, models, calibration, network, always-on, cutover, rollback), each step with commands, expected output and a failure action.
+- `CLAUDE.md`: section "Local models on this PC" renamed "Hosts"; says BLD becomes the primary host after cutover and links the runbook.
+- `docs/local-llm-roadmap.md`: new "Moving to BLD" section linking the runbook.
+- `docs/internal/sprint-log.md`: this entry.
+
+**Verified:** Documentation only; no machine was contacted. Checked the section order against the task, and that the lane H/I specs (machine.json fields, StudioSupervisor task, firewall rule, token/pair behaviour) match the runbook. Section 2.2 verifies files exist before proceeding. `tools/bld-preflight.ps1` is lane J task 2, so section 1 refers to it as planned.
+
+## Sprint 4j Task 2 — Preflight script for BLD
+
+**Changed:**
+- `tools/bld-preflight.ps1` (new): Read-only script covering every §1 prerequisite.
+  - **§1.1:** `nvidia-smi` on PATH → GPU name (WARN if not RTX 3090), VRAM ≥ 24576 MiB, CUDA ≥ 12.
+  - **§1.2:** `node --version` → v24.x; `npm --version` present.
+  - **§1.3:** `git` on PATH; `C:\Program Files\Git\bin\bash.exe` exists; `git user.name` and `git user.email` set.
+  - **§1.4:** `gh` on PATH; `gh auth status` exit code is 0.
+  - **§1.5:** `claude` on PATH; `claude --version` returns output (no live model call).
+  - **§1.6:** `ollama` on PATH; `Invoke-RestMethod http://127.0.0.1:11434/api/version` returns a version property.
+  - **§1.7:** `C:` free space ≥ 150 GB.
+  - Prints `[PASS]`/`[FAIL]` per sub-check, exits non-zero on any failure, never installs or changes anything.
+  - GPU CSV parsed by `LastIndexOf` to handle GPU names with spaces.
+  - GPU sub-checks (name, VRAM, CUDA) only run if `nvidia-smi` itself passes, so a missing GPU doesn't cascade false failures.
+
+**QA round 1 fixes:**
+- B1: runbook §1 plainly says to run `powershell -ExecutionPolicy Bypass -File tools\bld-preflight.ps1`.
+- B2: the Claude check uses `claude --version` only; no live model call.
+- B3: `Check` and `Warn` return `$null` and callers assign `$null = ...`, so no stray True/False output.
+- B4: the RTX 3090 check is a WARN (counted as a notice, exit code unaffected). Also fixed an inverted condition: the WARN scriptblock used `-notmatch`, which would have warned on the 3090 and stayed silent on other GPUs. It now uses `-match`.
+- B5: tool detection uses `$null -ne (Get-Command ...)`.
+
+**Verification:** Live preflight run recorded in org sprint log. ASCII scan confirms 0 non-ASCII bytes.
+
+## Sprint 4j Task 2 rework round 2
+
+**Problem:** QA round 1 found issues in the preflight script (non-ASCII characters, scoping question).
+
+**Changed (`tools/bld-preflight.ps1`):**
+- Removed non-ASCII characters (`§`, `→`) from section labels and comments — full ASCII confirmed by byte scan.
+- Confirmed `$ErrorActionPreference` scoping is correct (child scope semantics prevent leak).
+- CUDA fallback mapping corrected (N2).
+- WARN label renamed from "Git Bash at default path" to "Git Bash found" (N7).
+
+**Changed (`docs/runbook-bld.md`):**
+- S1: §6.2 Ollama restart — session env var and stderr redirect for `ollama serve`.
+- S2: §3.3 method A — added `$bld` variable and share-cleanup note.
+- N1, N6: various runbook nits.
+
+**Verification:** ASCII scan pass. Live run blocked by sandbox.
+
+## Sprint 4j Task 2 rework round 3
+
+**Problem:** Code review round 3 (`docs/internal/review-sprint4j-round2.md`) found B1 (wrong HQ path), S1-S4 (command errors), N1-N7 (nits), S5 (process).
+
+**Changed (`docs/runbook-bld.md`):**
+- B1: `HQ` path set to `C:\Users\goldg\AI Development Company` everywhere; clone command, SCP paths, and `net share` quoted for spaces.
+- B1: §9.4 — added vars.home verification for carried-over run records.
+- S1: §3.4 `Remove-Item` — fixed to `-Path runs, checkpoints` (array syntax); replaced `node ..\.studio\studio.js` with proper `cd` + `node .studio\studio.js`.
+- S2: §8.1 S4U credential check — replaced `git ls-remote` (works anonymously on public repos) with `git push --dry-run`; added `Remove-Item $outFile` before task registration; added `gh api user --jq .login`.
+- S3: §6.2 — removed persistent `SetEnvironmentVariable(... 'User')` that silently overrides `machine.json`; kept only `$env:OLLAMA_NUM_PARALLEL` for current session.
+- S4: §2.3 — replaced "check existing file" with "create studio.home.json" instructions (file is git-ignored).
+- N1: Removed stale "State goes to Ready right away" failure line.
+- N2: Clarified boot-time supervisor start is expected and safe.
+- N3: Added note that Ctrl+C stops only supervisor; Control Room/Ollama persist until logoff.
+- N4: Added `cd <HQ>` before `node .studio\studio.js status` in §9.4.
+- N5: Added "requires elevated shell" note for `net share`; clarified rotated events are optional.
+
+**Changed (`tools/bld-preflight.ps1`):**
+- N6: Removed dead code `$foundBashPath = ''` (outer scope never modified by scriptblock).
+
+**Changed (process):**
+- Deleted dev-written `docs/internal/qa/s4j-task-2-round2.md`.
+- Replaced duplicate/stale sprint-log entries with accurate round 2 and round 3 entries.

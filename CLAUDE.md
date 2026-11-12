@@ -38,7 +38,7 @@ The owner does not approve routine merges. **Internal PRs** (AIDevCompanyHQ, Stu
 
 ## Workflow Engine: default way to run work (ADR 0001)
 
-Pipelines run through `tools/engine/engine.js`, not through this chat session. The engine runs each stage as a headless Claude Code run using the role's agent file: **local models** (`qwen3.6:27b` via Ollama) for worker stages and **Claude Opus** only for gate reviews (design, milestone code review, R&D calibration). Success is decided by file and test checks, never by the model's own claim. Failed stages climb the ladder (local → local retry → Sonnet → **blocked** → owner).
+Pipelines run through `tools/engine/engine.js`, not through this chat session. The engine runs each stage as a headless Claude Code run using the role's agent file: **local models** (`qwen3.6:27b` via Ollama) for worker stages and **Claude Opus** for gate reviews (design, milestone code review, R&D calibration). Milestone code-review gates also run a parallel **Codex** reviewer — both Opus and Codex must not REJECT (`docs/adr/0004-codex-tier.md`). Success is decided by file and test checks, never by the model's own claim. Failed stages climb the ladder (local → local retry → **Codex** → Sonnet → **blocked** → owner); Codex rate/usage limits fall through to Sonnet without counting as a failure (`docs/adr/0004-codex-tier.md`).
 
 ```
 node tools/engine/engine.js pipelines                         # rd-cycle, lite-build, smoke
@@ -139,9 +139,9 @@ Write checkpoints a stranger could resume from: name the task from design.md or 
 
 Checkpoints are also good for ending a session cleanly, not just for stopping in an emergency.
 
-## Local models on this PC
+## Hosts
 
-Ollama runs on this PC (RTX 5090, 32 GB) at `127.0.0.1:11434`. Models unload after 5 minutes idle, so the GPU frees up. This is an interim setup while BLD is being repaired; keep model names identical to BLD so switching back is a one-line config change. Studio agents still run on Claude for now. Routing roles to local models is a later step (see `docs/local-llm-roadmap.md`).
+Ollama runs on this PC (RTX 5090, 32 GB) at `127.0.0.1:11434`. Models unload after 5 minutes idle, so the GPU frees up. This is an interim setup while BLD (RTX 3090, 24 GB, 192.168.1.117) is being set up; keep model names identical to BLD so switching is a one-line config change. **BLD becomes the primary host after cutover**; the 5090 PC then only browses the Control Room. The step-by-step move is in [`docs/runbook-bld.md`](docs/runbook-bld.md). Studio agents still run on Claude for now. Routing roles to local models is a later step (see `docs/local-llm-roadmap.md`).
 
 ## Control Room dashboard
 
@@ -170,4 +170,6 @@ This workflow is meant to move later to an always-on server running local LLMs, 
 <!-- claude-reflect: learned rules (saved from the band; edit freely) -->
 ## Learned rules
 - Create a separate GitHub repo for each individual development project using standard GitHub practices, and keep Studio control room in its own dedicated repo.
+- Ensure developers and employees use applicable local LLMs wherever possible, and keep full focus on developing HiveBoard.
+- Route most development work to local LLMs, pick Claude and ChatGPT models by task fit, and rebalance around usage limits instead of halting work.
 <!-- end claude-reflect -->
