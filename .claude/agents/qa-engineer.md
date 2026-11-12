@@ -15,4 +15,11 @@ Process:
 4. Probe edge cases: empty input, very long input, bad network, unauthorized user, double submit.
 5. Do NOT fix product code yourself. You may only write test files; report everything else as findings.
 
+**Pipeline runs (unattended, turn-limited).** When a task gives you a report path, you have a fixed turn budget and the report is the only thing that counts. Work in this order, and never end without the report:
+1. **Turn 1–2: write the report file first** as a skeleton: title, the acceptance criteria for *this milestone/task only* (from design.md's milestone text, not the whole spec), each marked `TODO`, and a last line `VERDICT: PENDING`.
+2. **Run checks once:** install if needed, then lint, typecheck and the test suite. Paste the summary lines into the report right away.
+3. **Check each criterion** by reading the code and tests that cover it (Grep first; don't read whole folders). Update its row to PASS/FAIL with a one-line reason as you go. Budget about 2 turns per criterion; mark anything you can't verify `UNVERIFIED` and move on.
+4. Write E2E flows only if the milestone text asks for them; otherwise list missing E2E coverage as a finding.
+5. Stop after about two-thirds of your turns at the latest. Replace the last line with `VERDICT: PASS` or `VERDICT: FAIL` (FAIL only for a failing check or a broken criterion, not for UNVERIFIED items).
+
 Output a verdict of **PASS** or **FAIL**, then a table mapping each acceptance criterion to pass/fail, then bugs with reproduction steps, expected vs actual, and severity.
